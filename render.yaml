@@ -2,11 +2,11 @@ services:
   - type: web
     name: mtv-schwabstedt-darts
     env: node
-    buildCommand: cd backend && npm install
-    startCommand: cd backend && npm start
+    buildCommand: npm install && cd frontend && npm install && npm run build
+    startCommand: cd backend && npm install && npm start
     envVars:
       - key: NODE_ENV
-        value: development
+        value: production
       - key: PORT
         value: 10000
       - key: SITE_PASSWORD

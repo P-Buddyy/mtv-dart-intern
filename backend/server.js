@@ -77,13 +77,8 @@ app.use('/api/', limiter);
 
 app.use(express.json({ limit: '10mb' }));
 
-// Serve frontend files - in development from src, in production from dist
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../frontend/dist')));
-} else {
-  app.use(express.static(path.join(__dirname, '../frontend')));
-  app.use(express.static(path.join(__dirname, '../frontend/src')));
-}
+// Serve frontend files from dist folder
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 // JWT Middleware für geschützte Routen
 const authenticateToken = (req, res, next) => {
@@ -348,7 +343,7 @@ app.delete('/api/cash/history', (req, res) => {
 
 // Fallback für alle Frontend-Routen - serve index.html
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/index.html'));
+  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
 
 // Error Handler

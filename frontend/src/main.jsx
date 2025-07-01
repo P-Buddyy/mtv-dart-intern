@@ -12,7 +12,7 @@ function App() {
   ]);
   const [games, setGames] = React.useState([]);
   const [drinks, setDrinks] = React.useState({
-    prices: { bier: 1.50, mischung: 2.50, kurze: 0.50, softdrinks: 1.00, redbull: 2.00 },
+    prices: { Bier: 1.50, Mischung: 2.50, Kurze: 0.50, Softdrinks: 1.00, RedBull: 2.00 },
     debts: {}
   });
   const [cash, setCash] = React.useState({ balance: 0, history: [] });
@@ -37,9 +37,24 @@ function App() {
     ));
   };
 
+  const deleteMember = (id) => {
+    setMembers(members.filter(m => m.id !== id));
+    const newDebts = { ...drinks.debts };
+    delete newDebts[id];
+    setDrinks({ ...drinks, debts: newDebts });
+  };
+
   const addGame = (gameData) => {
     const newId = Math.max(...games.map(g => g.id), 0) + 1;
     setGames([...games, { ...gameData, id: newId, createdAt: new Date().toISOString() }]);
+  };
+
+  const updateGame = (id, gameData) => {
+    setGames(games.map(g => g.id === id ? { ...g, ...gameData } : g));
+  };
+
+  const deleteGame = (id) => {
+    setGames(games.filter(g => g.id !== id));
   };
 
   const addDrinks = (memberId, drinkData) => {
@@ -56,7 +71,7 @@ function App() {
     setDrinks({ ...drinks, debts: newDebts });
   };
 
-  const payDebt = (memberId, amount) => {
+  const payDrinks = (memberId, amount) => {
     const newDebts = { ...drinks.debts };
     newDebts[memberId] = (newDebts[memberId] || 0) - parseFloat(amount);
     setDrinks({ ...drinks, debts: newDebts });
@@ -67,7 +82,7 @@ function App() {
         id: Math.max(...cash.history.map(h => h.id), 0) + 1,
         date: new Date().toISOString(),
         amount: parseFloat(amount),
-        description: `${members.find(m => m.id === memberId)?.name} hat ${amount}€ bezahlt`,
+        description: `${members.find(m => m.id === memberId)?.name} hat ${amount}€ Getränke bezahlt`,
         type: 'income'
       },
       ...cash.history.slice(0, 49)
@@ -90,18 +105,31 @@ function App() {
     setCash({ balance: newBalance, history: newHistory });
   };
 
+  const clearCashHistory = () => {
+    if (confirm('Möchtest du wirklich die gesamte Kassenhistorie löschen?')) {
+      setCash({ ...cash, history: [] });
+    }
+  };
+
+  // Mitglieder-Statistiken
+  const memberStats = {
+    total: members.length,
+    active: members.filter(m => m.status === 'active').length,
+    inactive: members.filter(m => m.status === 'inactive').length
+  };
+
   if (!isAuthenticated) {
     return React.createElement('div', {
-      className: 'min-h-screen bg-gradient-to-br from-blue-900 to-yellow-600 flex items-center justify-center'
+      className: 'min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-yellow-600 flex items-center justify-center p-4'
     },
       React.createElement('div', {
-        className: 'bg-white p-8 rounded-lg shadow-xl w-full max-w-md'
+        className: 'bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-2xl w-full max-w-md transform transition-all duration-300 hover:scale-105'
       },
         React.createElement('div', {
           className: 'text-center mb-8'
         },
           React.createElement('h1', {
-            className: 'text-3xl font-bold text-gray-800 mb-2'
+            className: 'text-4xl font-bold text-gray-800 mb-2 bg-gradient-to-r from-blue-600 to-yellow-500 bg-clip-text text-transparent'
           }, 'MTV Schwabstedt Darts'),
           React.createElement('p', {
             className: 'text-gray-600'
@@ -119,14 +147,14 @@ function App() {
               type: 'password',
               value: password,
               onChange: (e) => setPassword(e.target.value),
-              className: 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+              className: 'w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-200',
               placeholder: 'Passwort eingeben',
               required: true
             })
           ),
           React.createElement('button', {
             type: 'submit',
-            className: 'w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors'
+            className: 'w-full bg-gradient-to-r from-blue-600 to-yellow-500 text-white py-3 px-4 rounded-xl hover:from-blue-700 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 font-semibold'
           }, 'Anmelden')
         )
       )
@@ -135,17 +163,17 @@ function App() {
 
   // Sidebar Navigation
   const Sidebar = () => React.createElement('div', {
-    className: 'fixed inset-y-0 left-0 z-50 w-64 bg-blue-900 transform transition-transform duration-300 ease-in-out'
+    className: 'fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-blue-900 to-blue-800 transform transition-transform duration-300 ease-in-out shadow-2xl'
   },
     React.createElement('div', {
-      className: 'flex items-center justify-between h-16 px-6 bg-blue-800'
+      className: 'flex items-center justify-between h-16 px-6 bg-blue-950'
     },
       React.createElement('h2', {
-        className: 'text-white font-semibold'
+        className: 'text-white font-bold text-lg'
       }, 'MTV Darts'),
       React.createElement('button', {
         onClick: () => setIsAuthenticated(false),
-        className: 'text-blue-200 hover:text-white'
+        className: 'text-blue-200 hover:text-white transition-colors duration-200'
       }, 'Abmelden')
     ),
     React.createElement('nav', {
@@ -161,13 +189,13 @@ function App() {
         React.createElement('button', {
           key: item.id,
           onClick: () => setCurrentPage(item.id),
-          className: `w-full flex items-center px-6 py-3 text-left transition-colors ${
+          className: `w-full flex items-center px-6 py-4 text-left transition-all duration-200 transform hover:scale-105 ${
             currentPage === item.id 
-              ? 'bg-blue-800 text-white' 
-              : 'text-blue-200 hover:bg-blue-800 hover:text-white'
+              ? 'bg-gradient-to-r from-yellow-500 to-yellow-400 text-blue-900 font-semibold shadow-lg' 
+              : 'text-blue-200 hover:bg-blue-700 hover:text-white'
           }`
         },
-          React.createElement('span', { className: 'mr-3' }, item.icon),
+          React.createElement('span', { className: 'mr-3 text-xl' }, item.icon),
           item.name
         )
       )
@@ -179,381 +207,55 @@ function App() {
     className: 'p-6'
   },
     React.createElement('h1', {
-      className: 'text-2xl font-bold mb-6'
+      className: 'text-3xl font-bold mb-8 bg-gradient-to-r from-blue-600 to-yellow-500 bg-clip-text text-transparent'
     }, 'Downloads'),
     React.createElement('div', {
-      className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+      className: 'grid grid-cols-1 md:grid-cols-2 gap-6'
     },
       [
-        { name: 'Liste PDF', file: 'Liste_PDF.pdf', icon: '📄' },
-        { name: 'Liste Word', file: 'Liste_Word.docx', icon: '📝' },
-        { name: 'Spielbericht', file: 'Spielbericht.pdf', icon: '📊' }
+        { name: 'Getränkeliste Gegner PDF', file: 'Getränkeliste_Gegner.pdf', icon: '📄' },
+        { name: 'Getränkeliste Gegner Word', file: 'Getränkeliste_Gegner.docx', icon: '📝' }
       ].map(item => 
         React.createElement('div', {
           key: item.file,
-          className: 'bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow'
+          className: 'bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 border border-gray-100'
         },
           React.createElement('div', {
             className: 'flex items-center mb-4'
           },
-            React.createElement('span', { className: 'text-2xl mr-3' }, item.icon),
+            React.createElement('span', { className: 'text-3xl mr-4' }, item.icon),
             React.createElement('h3', {
-              className: 'font-semibold'
+              className: 'font-semibold text-lg'
             }, item.name)
           ),
           React.createElement('a', {
             href: `/Listen/${item.file}`,
             download: true,
-            className: 'inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors'
+            className: 'inline-block bg-gradient-to-r from-blue-600 to-yellow-500 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 font-semibold'
           }, 'Herunterladen')
         )
       )
     )
   );
 
-  // Games Page
-  const GamesPage = () => {
-    const [newGame, setNewGame] = React.useState({ date: '', time: '', opponent: '', location: '' });
-    
-    return React.createElement('div', {
-      className: 'p-6'
-    },
-      React.createElement('h1', {
-        className: 'text-2xl font-bold mb-6'
-      }, 'Spielplan'),
-      React.createElement('div', {
-        className: 'bg-white p-6 rounded-lg shadow mb-6'
-      },
-        React.createElement('h2', {
-          className: 'text-lg font-semibold mb-4'
-        }, 'Neues Spiel hinzufügen'),
-        React.createElement('div', {
-          className: 'grid grid-cols-1 md:grid-cols-2 gap-4'
-        },
-          React.createElement('input', {
-            type: 'date',
-            value: newGame.date,
-            onChange: (e) => setNewGame({ ...newGame, date: e.target.value }),
-            className: 'px-3 py-2 border border-gray-300 rounded-md'
-          }),
-          React.createElement('input', {
-            type: 'time',
-            value: newGame.time,
-            onChange: (e) => setNewGame({ ...newGame, time: e.target.value }),
-            className: 'px-3 py-2 border border-gray-300 rounded-md'
-          }),
-          React.createElement('input', {
-            type: 'text',
-            placeholder: 'Gegner',
-            value: newGame.opponent,
-            onChange: (e) => setNewGame({ ...newGame, opponent: e.target.value }),
-            className: 'px-3 py-2 border border-gray-300 rounded-md'
-          }),
-          React.createElement('input', {
-            type: 'text',
-            placeholder: 'Ort',
-            value: newGame.location,
-            onChange: (e) => setNewGame({ ...newGame, location: e.target.value }),
-            className: 'px-3 py-2 border border-gray-300 rounded-md'
-          })
-        ),
-        React.createElement('button', {
-          onClick: () => {
-            if (newGame.date && newGame.time && newGame.opponent && newGame.location) {
-              addGame(newGame);
-              setNewGame({ date: '', time: '', opponent: '', location: '' });
-            }
-          },
-          className: 'mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700'
-        }, 'Spiel hinzufügen')
-      ),
-      React.createElement('div', {
-        className: 'space-y-4'
-      },
-        games.map(game => 
-          React.createElement('div', {
-            key: game.id,
-            className: 'bg-white p-4 rounded-lg shadow'
-          },
-            React.createElement('div', {
-              className: 'flex justify-between items-center'
-            },
-              React.createElement('div', null,
-                React.createElement('p', {
-                  className: 'font-semibold'
-                }, `${game.date} um ${game.time}`),
-                React.createElement('p', {
-                  className: 'text-gray-600'
-                }, `Gegner: ${game.opponent} | Ort: ${game.location}`)
-              )
-            )
-          )
-        )
-      )
-    );
-  };
-
-  // Members Page
-  const MembersPage = () => {
-    const [newMemberName, setNewMemberName] = React.useState('');
-    
-    return React.createElement('div', {
-      className: 'p-6'
-    },
-      React.createElement('h1', {
-        className: 'text-2xl font-bold mb-6'
-      }, 'Mitgliederverwaltung'),
-      React.createElement('div', {
-        className: 'bg-white p-6 rounded-lg shadow mb-6'
-      },
-        React.createElement('h2', {
-          className: 'text-lg font-semibold mb-4'
-        }, 'Neues Mitglied hinzufügen'),
-        React.createElement('div', {
-          className: 'flex gap-4'
-        },
-          React.createElement('input', {
-            type: 'text',
-            placeholder: 'Name des Mitglieds',
-            value: newMemberName,
-            onChange: (e) => setNewMemberName(e.target.value),
-            className: 'flex-1 px-3 py-2 border border-gray-300 rounded-md'
-          }),
-          React.createElement('button', {
-            onClick: () => {
-              if (newMemberName.trim()) {
-                addMember(newMemberName.trim());
-                setNewMemberName('');
-              }
-            },
-            className: 'bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700'
-          }, 'Hinzufügen')
-        )
-      ),
-      React.createElement('div', {
-        className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
-      },
-        members.map(member => 
-          React.createElement('div', {
-            key: member.id,
-            className: `p-4 rounded-lg shadow ${
-              member.status === 'active' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
-            }`
-          },
-            React.createElement('div', {
-              className: 'flex justify-between items-center'
-            },
-              React.createElement('h3', {
-                className: 'font-semibold'
-              }, member.name),
-              React.createElement('button', {
-                onClick: () => toggleMemberStatus(member.id),
-                className: `px-3 py-1 rounded text-sm ${
-                  member.status === 'active' 
-                    ? 'bg-red-600 text-white hover:bg-red-700' 
-                    : 'bg-green-600 text-white hover:bg-green-700'
-                }`
-              }, member.status === 'active' ? 'Deaktivieren' : 'Aktivieren')
-            )
-          )
-        )
-      )
-    );
-  };
-
-  // Drinks Page
-  const DrinksPage = () => {
-    const [selectedMember, setSelectedMember] = React.useState('');
-    const [drinkAmounts, setDrinkAmounts] = React.useState({});
-    
-    return React.createElement('div', {
-      className: 'p-6'
-    },
-      React.createElement('h1', {
-        className: 'text-2xl font-bold mb-6'
-      }, 'Getränke & Schulden'),
-      React.createElement('div', {
-        className: 'grid grid-cols-1 lg:grid-cols-2 gap-6'
-      },
-        // Getränke hinzufügen
-        React.createElement('div', {
-          className: 'bg-white p-6 rounded-lg shadow'
-        },
-          React.createElement('h2', {
-            className: 'text-lg font-semibold mb-4'
-          }, 'Getränke hinzufügen'),
-          React.createElement('select', {
-            value: selectedMember,
-            onChange: (e) => setSelectedMember(e.target.value),
-            className: 'w-full px-3 py-2 border border-gray-300 rounded-md mb-4'
-          },
-            React.createElement('option', { value: '' }, 'Mitglied auswählen'),
-            members.filter(m => m.status === 'active').map(member =>
-              React.createElement('option', { key: member.id, value: member.id }, member.name)
-            )
-          ),
-          Object.keys(drinks.prices).map(drinkType => 
-            React.createElement('div', {
-              key: drinkType,
-              className: 'flex justify-between items-center mb-2'
-            },
-              React.createElement('span', null, `${drinkType} (${drinks.prices[drinkType]}€)`),
-              React.createElement('input', {
-                type: 'number',
-                min: '0',
-                value: drinkAmounts[drinkType] || 0,
-                onChange: (e) => setDrinkAmounts({ ...drinkAmounts, [drinkType]: parseInt(e.target.value) || 0 }),
-                className: 'w-20 px-2 py-1 border border-gray-300 rounded'
-              })
-            )
-          ),
-          React.createElement('button', {
-            onClick: () => {
-              if (selectedMember && Object.values(drinkAmounts).some(v => v > 0)) {
-                addDrinks(parseInt(selectedMember), drinkAmounts);
-                setDrinkAmounts({});
-              }
-            },
-            className: 'mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700'
-          }, 'Hinzufügen')
-        ),
-        // Schulden anzeigen
-        React.createElement('div', {
-          className: 'bg-white p-6 rounded-lg shadow'
-        },
-          React.createElement('h2', {
-            className: 'text-lg font-semibold mb-4'
-          }, 'Schulden'),
-          members.filter(m => m.status === 'active').map(member => {
-            const debt = drinks.debts[member.id] || 0;
-            return React.createElement('div', {
-              key: member.id,
-              className: 'flex justify-between items-center mb-2 p-2 bg-gray-50 rounded'
-            },
-              React.createElement('span', null, member.name),
-              React.createElement('span', {
-                className: debt > 0 ? 'text-red-600 font-semibold' : 'text-green-600'
-              }, `${debt.toFixed(2)}€`)
-            );
-          })
-        )
-      )
-    );
-  };
-
-  // Cash Page
-  const CashPage = () => {
-    const [transaction, setTransaction] = React.useState({ amount: '', description: '', type: 'income' });
-    
-    return React.createElement('div', {
-      className: 'p-6'
-    },
-      React.createElement('h1', {
-        className: 'text-2xl font-bold mb-6'
-      }, 'Kassenverwaltung'),
-      React.createElement('div', {
-        className: 'bg-white p-6 rounded-lg shadow mb-6'
-      },
-        React.createElement('div', {
-          className: 'text-center mb-6'
-        },
-          React.createElement('h2', {
-            className: 'text-3xl font-bold text-green-600'
-          }, `${cash.balance.toFixed(2)}€`),
-          React.createElement('p', {
-            className: 'text-gray-600'
-          }, 'Aktueller Kassenstand')
-        ),
-        React.createElement('h3', {
-          className: 'text-lg font-semibold mb-4'
-        }, 'Neue Transaktion'),
-        React.createElement('div', {
-          className: 'grid grid-cols-1 md:grid-cols-3 gap-4'
-        },
-          React.createElement('input', {
-            type: 'number',
-            step: '0.01',
-            placeholder: 'Betrag',
-            value: transaction.amount,
-            onChange: (e) => setTransaction({ ...transaction, amount: e.target.value }),
-            className: 'px-3 py-2 border border-gray-300 rounded-md'
-          }),
-          React.createElement('input', {
-            type: 'text',
-            placeholder: 'Beschreibung',
-            value: transaction.description,
-            onChange: (e) => setTransaction({ ...transaction, description: e.target.value }),
-            className: 'px-3 py-2 border border-gray-300 rounded-md'
-          }),
-          React.createElement('select', {
-            value: transaction.type,
-            onChange: (e) => setTransaction({ ...transaction, type: e.target.value }),
-            className: 'px-3 py-2 border border-gray-300 rounded-md'
-          },
-            React.createElement('option', { value: 'income' }, 'Einnahme'),
-            React.createElement('option', { value: 'expense' }, 'Ausgabe')
-          )
-        ),
-        React.createElement('button', {
-          onClick: () => {
-            if (transaction.amount && transaction.description) {
-              addCashTransaction(transaction.amount, transaction.description, transaction.type);
-              setTransaction({ amount: '', description: '', type: 'income' });
-            }
-          },
-          className: 'mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700'
-        }, 'Transaktion hinzufügen')
-      ),
-      React.createElement('div', {
-        className: 'bg-white p-6 rounded-lg shadow'
-      },
-        React.createElement('h3', {
-          className: 'text-lg font-semibold mb-4'
-        }, 'Kassenhistorie'),
-        React.createElement('div', {
-          className: 'space-y-2 max-h-96 overflow-y-auto'
-        },
-          cash.history.map(entry => 
-            React.createElement('div', {
-              key: entry.id,
-              className: 'flex justify-between items-center p-2 bg-gray-50 rounded'
-            },
-              React.createElement('div', null,
-                React.createElement('p', {
-                  className: 'font-medium'
-                }, entry.description),
-                React.createElement('p', {
-                  className: 'text-sm text-gray-600'
-                }, new Date(entry.date).toLocaleDateString('de-DE'))
-              ),
-              React.createElement('span', {
-                className: entry.type === 'income' ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'
-              }, `${entry.type === 'income' ? '+' : '-'}${entry.amount.toFixed(2)}€`)
-            )
-          )
-        )
-      )
-    );
-  };
-
   // Main Content
   const renderPage = () => {
     switch (currentPage) {
       case 'downloads': return React.createElement(DownloadsPage);
-      case 'games': return React.createElement(GamesPage);
-      case 'members': return React.createElement(MembersPage);
-      case 'drinks': return React.createElement(DrinksPage);
-      case 'cash': return React.createElement(CashPage);
+      case 'games': return React.createElement('div', { className: 'p-6' }, 'Spielplan - Coming Soon');
+      case 'members': return React.createElement('div', { className: 'p-6' }, 'Mitglieder - Coming Soon');
+      case 'drinks': return React.createElement('div', { className: 'p-6' }, 'Getränke - Coming Soon');
+      case 'cash': return React.createElement('div', { className: 'p-6' }, 'Kasse - Coming Soon');
       default: return React.createElement(DownloadsPage);
     }
   };
 
   return React.createElement('div', {
-    className: 'flex min-h-screen bg-gray-50'
+    className: 'flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100'
   },
     React.createElement(Sidebar),
     React.createElement('main', {
-      className: 'flex-1 ml-64'
+      className: 'flex-1 ml-64 transition-all duration-300'
     },
       React.createElement('div', {
         className: 'pt-16'

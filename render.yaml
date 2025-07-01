@@ -2,7 +2,7 @@ services:
   - type: web
     name: mtv-schwabstedt-darts
     env: node
-    buildCommand: npm run install:all && npm run build
+    buildCommand: npm run install:all && npm run build:frontend
     startCommand: npm start
     envVars:
       - key: NODE_ENV

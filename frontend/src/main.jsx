@@ -10,7 +10,7 @@ function App() {
   const [members, setMembers] = useState([]);
   const [games, setGames] = useState([]);
   const [drinks, setDrinks] = useState({
-    prices: { bier: 1.50, mischung: 2.50, kurze: 0.50, softdrinks: 1.00, redbull: 2.00 },
+    prices: {},
     debts: {}
   });
   const [cash, setCash] = useState({ balance: 0, history: [] });
@@ -152,7 +152,17 @@ function App() {
   const loadDrinks = async () => {
     try {
       const drinksData = await apiCall('/drinks');
-      setDrinks(drinksData);
+      // API gibt { prices, members } zurück, aber wir brauchen { prices, debts }
+      const debts = {};
+      if (drinksData.members) {
+        drinksData.members.forEach(member => {
+          debts[member.id] = member.debts || 0;
+        });
+      }
+      setDrinks({
+        prices: drinksData.prices || {},
+        debts: debts
+      });
     } catch (error) {
       console.error('Fehler beim Laden der Getränke:', error);
     }
@@ -827,7 +837,7 @@ function App() {
               React.createElement('option', { key: member.id, value: member.id }, member.name)
             )
           ),
-          Object.keys(drinks.prices).map(drinkType => 
+          (drinks.prices ? Object.keys(drinks.prices) : []).map(drinkType => 
             React.createElement('div', {
               key: drinkType,
               className: 'flex justify-between items-center mb-4 p-3 bg-gray-50 rounded-xl'
@@ -862,7 +872,7 @@ function App() {
             className: 'text-xl font-semibold mb-6 text-gray-800'
           }, 'Schulden & Bezahlung'),
           members.filter(m => m.status === 'active').map(member => {
-            const debt = drinks.debts[member.id] || 0;
+            const debt = (drinks.debts && drinks.debts[member.id]) || 0;
             return React.createElement('div', {
               key: member.id,
               className: 'flex justify-between items-center mb-4 p-4 bg-gray-50 rounded-xl'
@@ -898,7 +908,7 @@ function App() {
           }, `${payingMember.name} - Bezahlung`),
           React.createElement('p', {
             className: 'text-gray-600 mb-4'
-          }, `Aktuelle Schulden: ${(drinks.debts[payingMember.id] || 0).toFixed(2)}€`),
+          }, `Aktuelle Schulden: ${((drinks.debts && drinks.debts[payingMember.id]) || 0).toFixed(2)}€`),
           React.createElement('input', {
             type: 'number',
             step: '0.01',

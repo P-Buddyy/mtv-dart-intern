@@ -210,11 +210,12 @@ function App() {
       className: 'text-3xl font-bold mb-8 bg-gradient-to-r from-blue-600 to-yellow-500 bg-clip-text text-transparent'
     }, 'Downloads'),
     React.createElement('div', {
-      className: 'grid grid-cols-1 md:grid-cols-2 gap-6'
+      className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
     },
       [
         { name: 'Getränkeliste Gegner PDF', file: 'Getränkeliste_Gegner.pdf', icon: '📄' },
-        { name: 'Getränkeliste Gegner Word', file: 'Getränkeliste_Gegner.docx', icon: '📝' }
+        { name: 'Getränkeliste Gegner Word', file: 'Getränkeliste_Gegner.docx', icon: '📝' },
+        { name: 'Spielbericht', file: 'Spielbericht.pdf', icon: '📊' }
       ].map(item => 
         React.createElement('div', {
           key: item.file,
@@ -238,14 +239,617 @@ function App() {
     )
   );
 
+  // Games Page
+  const GamesPage = () => {
+    const [newGame, setNewGame] = React.useState({ 
+      date: '', 
+      time: '', 
+      opponent: '', 
+      location: 'home',
+      participants: [],
+      result: ''
+    });
+    const [editingGame, setEditingGame] = React.useState(null);
+    
+    const formatDate = (dateString) => {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('de-DE');
+    };
+
+    const addParticipant = (gameId, memberId) => {
+      if (editingGame && editingGame.id === gameId) {
+        const updatedParticipants = [...editingGame.participants];
+        if (!updatedParticipants.includes(memberId)) {
+          updatedParticipants.push(memberId);
+          setEditingGame({ ...editingGame, participants: updatedParticipants });
+        }
+      }
+    };
+
+    const saveGame = () => {
+      if (newGame.date && newGame.time && newGame.opponent) {
+        addGame(newGame);
+        setNewGame({ date: '', time: '', opponent: '', location: 'home', participants: [], result: '' });
+      }
+    };
+
+    const saveEdit = () => {
+      if (editingGame && editingGame.date && editingGame.time && editingGame.opponent) {
+        updateGame(editingGame.id, editingGame);
+        setEditingGame(null);
+      }
+    };
+    
+    return React.createElement('div', {
+      className: 'p-6'
+    },
+      React.createElement('h1', {
+        className: 'text-3xl font-bold mb-8 bg-gradient-to-r from-blue-600 to-yellow-500 bg-clip-text text-transparent'
+      }, 'Spielplan'),
+      React.createElement('div', {
+        className: 'bg-white p-6 rounded-2xl shadow-lg mb-8 border border-gray-100'
+      },
+        React.createElement('h2', {
+          className: 'text-xl font-semibold mb-6 text-gray-800'
+        }, 'Neues Spiel hinzufügen'),
+        React.createElement('div', {
+          className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
+        },
+          React.createElement('input', {
+            type: 'date',
+            value: newGame.date,
+            onChange: (e) => setNewGame({ ...newGame, date: e.target.value }),
+            className: 'px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500'
+          }),
+          React.createElement('input', {
+            type: 'time',
+            value: newGame.time,
+            onChange: (e) => setNewGame({ ...newGame, time: e.target.value }),
+            className: 'px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500'
+          }),
+          React.createElement('input', {
+            type: 'text',
+            placeholder: 'Gegner',
+            value: newGame.opponent,
+            onChange: (e) => setNewGame({ ...newGame, opponent: e.target.value }),
+            className: 'px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500'
+          }),
+          React.createElement('select', {
+            value: newGame.location,
+            onChange: (e) => setNewGame({ ...newGame, location: e.target.value }),
+            className: 'px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500'
+          },
+            React.createElement('option', { value: 'home' }, 'Heim'),
+            React.createElement('option', { value: 'away' }, 'Auswärts')
+          ),
+          React.createElement('input', {
+            type: 'text',
+            placeholder: 'Ergebnis (z.B. 3:2)',
+            value: newGame.result,
+            onChange: (e) => setNewGame({ ...newGame, result: e.target.value }),
+            className: 'px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500'
+          })
+        ),
+        React.createElement('button', {
+          onClick: saveGame,
+          className: 'mt-6 bg-gradient-to-r from-blue-600 to-yellow-500 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 font-semibold'
+        }, 'Spiel hinzufügen')
+      ),
+      React.createElement('div', {
+        className: 'space-y-6'
+      },
+        games.map(game => 
+          React.createElement('div', {
+            key: game.id,
+            className: 'bg-white p-6 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300'
+          },
+            editingGame && editingGame.id === game.id ? 
+              // Edit Mode
+              React.createElement('div', null,
+                React.createElement('div', {
+                  className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4'
+                },
+                  React.createElement('input', {
+                    type: 'date',
+                    value: editingGame.date,
+                    onChange: (e) => setEditingGame({ ...editingGame, date: e.target.value }),
+                    className: 'px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500'
+                  }),
+                  React.createElement('input', {
+                    type: 'time',
+                    value: editingGame.time,
+                    onChange: (e) => setEditingGame({ ...editingGame, time: e.target.value }),
+                    className: 'px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500'
+                  }),
+                  React.createElement('input', {
+                    type: 'text',
+                    placeholder: 'Gegner',
+                    value: editingGame.opponent,
+                    onChange: (e) => setEditingGame({ ...editingGame, opponent: e.target.value }),
+                    className: 'px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500'
+                  }),
+                  React.createElement('select', {
+                    value: editingGame.location,
+                    onChange: (e) => setEditingGame({ ...editingGame, location: e.target.value }),
+                    className: 'px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500'
+                  },
+                    React.createElement('option', { value: 'home' }, 'Heim'),
+                    React.createElement('option', { value: 'away' }, 'Auswärts')
+                  ),
+                  React.createElement('input', {
+                    type: 'text',
+                    placeholder: 'Ergebnis',
+                    value: editingGame.result,
+                    onChange: (e) => setEditingGame({ ...editingGame, result: e.target.value }),
+                    className: 'px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500'
+                  })
+                ),
+                React.createElement('div', {
+                  className: 'mb-4'
+                },
+                  React.createElement('h4', {
+                    className: 'font-semibold mb-2'
+                  }, 'Teilnehmer:'),
+                  React.createElement('div', {
+                    className: 'flex flex-wrap gap-2'
+                  },
+                    members.filter(m => m.status === 'active').map(member =>
+                      React.createElement('button', {
+                        key: member.id,
+                        onClick: () => addParticipant(game.id, member.id),
+                        className: `px-3 py-1 rounded-full text-sm transition-all duration-200 ${
+                          editingGame.participants.includes(member.id)
+                            ? 'bg-yellow-500 text-blue-900 font-semibold'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`
+                      }, member.name)
+                    )
+                  )
+                ),
+                React.createElement('div', {
+                  className: 'flex gap-2'
+                },
+                  React.createElement('button', {
+                    onClick: saveEdit,
+                    className: 'bg-green-600 text-white px-4 py-2 rounded-xl hover:bg-green-700 transition-all duration-200'
+                  }, 'Speichern'),
+                  React.createElement('button', {
+                    onClick: () => setEditingGame(null),
+                    className: 'bg-gray-600 text-white px-4 py-2 rounded-xl hover:bg-gray-700 transition-all duration-200'
+                  }, 'Abbrechen')
+                )
+              ) :
+              // View Mode
+              React.createElement('div', null,
+                React.createElement('div', {
+                  className: 'flex justify-between items-start mb-4'
+                },
+                  React.createElement('div', null,
+                    React.createElement('h3', {
+                      className: 'text-2xl font-bold text-blue-900'
+                    }, `vs ${game.opponent}`),
+                    React.createElement('p', {
+                      className: 'text-gray-600 font-medium'
+                    }, formatDate(game.date)),
+                    React.createElement('p', {
+                      className: 'text-gray-500'
+                    }, `${game.time} Uhr - ${game.location === 'home' ? 'Heim' : 'Auswärts'}`),
+                    game.result && React.createElement('p', {
+                      className: 'text-lg font-semibold text-green-600 mt-2'
+                    }, `Ergebnis: ${game.result}`)
+                  ),
+                  React.createElement('div', {
+                    className: 'flex gap-2'
+                  },
+                    React.createElement('button', {
+                      onClick: () => setEditingGame(game),
+                      className: 'bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition-all duration-200 text-sm'
+                    }, 'Bearbeiten'),
+                    React.createElement('button', {
+                      onClick: () => deleteGame(game.id),
+                      className: 'bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition-all duration-200 text-sm'
+                    }, 'Löschen')
+                  )
+                ),
+                game.participants && game.participants.length > 0 && React.createElement('div', null,
+                  React.createElement('h4', {
+                    className: 'font-semibold mb-2 text-gray-700'
+                  }, 'Teilnehmer:'),
+                  React.createElement('div', {
+                    className: 'flex flex-wrap gap-2'
+                  },
+                    game.participants.map(participantId => {
+                      const member = members.find(m => m.id === participantId);
+                      return member ? React.createElement('span', {
+                        key: participantId,
+                        className: 'bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm'
+                      }, member.name) : null;
+                    })
+                  )
+                )
+              )
+          )
+        )
+      )
+    );
+  };
+
+  // Members Page
+  const MembersPage = () => {
+    const [newMemberName, setNewMemberName] = React.useState('');
+    
+    return React.createElement('div', {
+      className: 'p-6'
+    },
+      React.createElement('h1', {
+        className: 'text-3xl font-bold mb-8 bg-gradient-to-r from-blue-600 to-yellow-500 bg-clip-text text-transparent'
+      }, 'Mitgliederverwaltung'),
+      
+      // Statistiken
+      React.createElement('div', {
+        className: 'grid grid-cols-1 md:grid-cols-3 gap-6 mb-8'
+      },
+        React.createElement('div', {
+          className: 'bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-2xl shadow-lg'
+        },
+          React.createElement('div', {
+            className: 'text-3xl font-bold'
+          }, memberStats.total),
+          React.createElement('p', {
+            className: 'text-blue-100'
+          }, 'Gesamtmitglieder')
+        ),
+        React.createElement('div', {
+          className: 'bg-gradient-to-r from-green-600 to-green-700 text-white p-6 rounded-2xl shadow-lg'
+        },
+          React.createElement('div', {
+            className: 'text-3xl font-bold'
+          }, memberStats.active),
+          React.createElement('p', {
+            className: 'text-green-100'
+          }, 'Aktive Mitglieder')
+        ),
+        React.createElement('div', {
+          className: 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white p-6 rounded-2xl shadow-lg'
+        },
+          React.createElement('div', {
+            className: 'text-3xl font-bold'
+          }, memberStats.inactive),
+          React.createElement('p', {
+            className: 'text-yellow-100'
+          }, 'Inaktive Mitglieder')
+        )
+      ),
+
+      React.createElement('div', {
+        className: 'bg-white p-6 rounded-2xl shadow-lg mb-8 border border-gray-100'
+      },
+        React.createElement('h2', {
+          className: 'text-xl font-semibold mb-6 text-gray-800'
+        }, 'Neues Mitglied hinzufügen'),
+        React.createElement('div', {
+          className: 'flex gap-4'
+        },
+          React.createElement('input', {
+            type: 'text',
+            placeholder: 'Name des Mitglieds',
+            value: newMemberName,
+            onChange: (e) => setNewMemberName(e.target.value),
+            className: 'flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500'
+          }),
+          React.createElement('button', {
+            onClick: () => {
+              if (newMemberName.trim()) {
+                addMember(newMemberName.trim());
+                setNewMemberName('');
+              }
+            },
+            className: 'bg-gradient-to-r from-blue-600 to-yellow-500 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 font-semibold'
+          }, 'Hinzufügen')
+        )
+      ),
+      React.createElement('div', {
+        className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+      },
+        members.map(member => 
+          React.createElement('div', {
+            key: member.id,
+            className: `p-6 rounded-2xl shadow-lg border transition-all duration-300 hover:shadow-xl transform hover:scale-105 ${
+              member.status === 'active' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+            }`
+          },
+            React.createElement('div', {
+              className: 'flex justify-between items-center mb-4'
+            },
+              React.createElement('h3', {
+                className: 'font-semibold text-lg'
+              }, member.name),
+              React.createElement('span', {
+                className: `px-3 py-1 rounded-full text-sm font-medium ${
+                  member.status === 'active' 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-red-100 text-red-800'
+                }`
+              }, member.status === 'active' ? 'Aktiv' : 'Inaktiv')
+            ),
+            React.createElement('div', {
+              className: 'flex gap-2'
+            },
+              React.createElement('button', {
+                onClick: () => toggleMemberStatus(member.id),
+                className: `px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  member.status === 'active' 
+                    ? 'bg-yellow-500 text-blue-900 hover:bg-yellow-600' 
+                    : 'bg-green-500 text-white hover:bg-green-600'
+                }`
+              }, member.status === 'active' ? 'Deaktivieren' : 'Aktivieren'),
+              React.createElement('button', {
+                onClick: () => {
+                  if (confirm(`Möchtest du ${member.name} wirklich löschen? Alle Daten werden unwiderruflich gelöscht.`)) {
+                    deleteMember(member.id);
+                  }
+                },
+                className: 'bg-red-600 text-white px-4 py-2 rounded-xl hover:bg-red-700 transition-all duration-200 text-sm font-medium'
+              }, 'Löschen')
+            )
+          )
+        )
+      )
+    );
+  };
+
+  // Drinks Page
+  const DrinksPage = () => {
+    const [selectedMember, setSelectedMember] = React.useState('');
+    const [drinkAmounts, setDrinkAmounts] = React.useState({});
+    const [payAmount, setPayAmount] = React.useState('');
+    const [payingMember, setPayingMember] = React.useState(null);
+    
+    return React.createElement('div', {
+      className: 'p-6'
+    },
+      React.createElement('h1', {
+        className: 'text-3xl font-bold mb-8 bg-gradient-to-r from-blue-600 to-yellow-500 bg-clip-text text-transparent'
+      }, 'Getränke & Schulden'),
+      React.createElement('div', {
+        className: 'grid grid-cols-1 lg:grid-cols-2 gap-8'
+      },
+        // Getränke hinzufügen
+        React.createElement('div', {
+          className: 'bg-white p-6 rounded-2xl shadow-lg border border-gray-100'
+        },
+          React.createElement('h2', {
+            className: 'text-xl font-semibold mb-6 text-gray-800'
+          }, 'Getränke hinzufügen'),
+          React.createElement('select', {
+            value: selectedMember,
+            onChange: (e) => setSelectedMember(e.target.value),
+            className: 'w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 mb-6'
+          },
+            React.createElement('option', { value: '' }, 'Mitglied auswählen'),
+            members.filter(m => m.status === 'active').map(member =>
+              React.createElement('option', { key: member.id, value: member.id }, member.name)
+            )
+          ),
+          Object.keys(drinks.prices).map(drinkType => 
+            React.createElement('div', {
+              key: drinkType,
+              className: 'flex justify-between items-center mb-4 p-3 bg-gray-50 rounded-xl'
+            },
+              React.createElement('span', {
+                className: 'font-medium text-gray-700'
+              }, `${drinkType} (${drinks.prices[drinkType]}€)`),
+              React.createElement('input', {
+                type: 'number',
+                min: '0',
+                value: drinkAmounts[drinkType] || 0,
+                onChange: (e) => setDrinkAmounts({ ...drinkAmounts, [drinkType]: parseInt(e.target.value) || 0 }),
+                className: 'w-20 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500'
+              })
+            )
+          ),
+          React.createElement('button', {
+            onClick: () => {
+              if (selectedMember && Object.values(drinkAmounts).some(v => v > 0)) {
+                addDrinks(parseInt(selectedMember), drinkAmounts);
+                setDrinkAmounts({});
+              }
+            },
+            className: 'mt-6 w-full bg-gradient-to-r from-blue-600 to-yellow-500 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 font-semibold'
+          }, 'Hinzufügen')
+        ),
+        // Schulden anzeigen und bezahlen
+        React.createElement('div', {
+          className: 'bg-white p-6 rounded-2xl shadow-lg border border-gray-100'
+        },
+          React.createElement('h2', {
+            className: 'text-xl font-semibold mb-6 text-gray-800'
+          }, 'Schulden & Bezahlung'),
+          members.filter(m => m.status === 'active').map(member => {
+            const debt = drinks.debts[member.id] || 0;
+            return React.createElement('div', {
+              key: member.id,
+              className: 'flex justify-between items-center mb-4 p-4 bg-gray-50 rounded-xl'
+            },
+              React.createElement('div', null,
+                React.createElement('span', {
+                  className: 'font-medium text-gray-700'
+                }, member.name),
+                React.createElement('span', {
+                  className: `block font-bold text-lg ${
+                    debt > 0 ? 'text-red-600' : debt < 0 ? 'text-green-600' : 'text-gray-600'
+                  }`
+                }, `${debt.toFixed(2)}€`)
+              ),
+              React.createElement('button', {
+                onClick: () => setPayingMember(member),
+                className: 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-4 py-2 rounded-xl hover:from-yellow-600 hover:to-yellow-700 transition-all duration-200 font-medium'
+              }, 'Bezahlen')
+            );
+          })
+        )
+      ),
+      
+      // Bezahlung Modal
+      payingMember && React.createElement('div', {
+        className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'
+      },
+        React.createElement('div', {
+          className: 'bg-white p-6 rounded-2xl shadow-2xl max-w-md w-full'
+        },
+          React.createElement('h3', {
+            className: 'text-xl font-semibold mb-4'
+          }, `${payingMember.name} - Bezahlung`),
+          React.createElement('p', {
+            className: 'text-gray-600 mb-4'
+          }, `Aktuelle Schulden: ${(drinks.debts[payingMember.id] || 0).toFixed(2)}€`),
+          React.createElement('input', {
+            type: 'number',
+            step: '0.01',
+            placeholder: 'Bezahlter Betrag',
+            value: payAmount,
+            onChange: (e) => setPayAmount(e.target.value),
+            className: 'w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 mb-4'
+          }),
+          React.createElement('div', {
+            className: 'flex gap-3'
+          },
+            React.createElement('button', {
+              onClick: () => {
+                if (payAmount && parseFloat(payAmount) > 0) {
+                  payDrinks(payingMember.id, payAmount);
+                  setPayAmount('');
+                  setPayingMember(null);
+                }
+              },
+              className: 'flex-1 bg-gradient-to-r from-green-600 to-green-700 text-white px-4 py-3 rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 font-semibold'
+            }, 'Bezahlen'),
+            React.createElement('button', {
+              onClick: () => {
+                setPayAmount('');
+                setPayingMember(null);
+              },
+              className: 'flex-1 bg-gray-600 text-white px-4 py-3 rounded-xl hover:bg-gray-700 transition-all duration-200 font-semibold'
+            }, 'Abbrechen')
+          )
+        )
+      )
+    );
+  };
+
+  // Cash Page
+  const CashPage = () => {
+    const [transaction, setTransaction] = React.useState({ amount: '', description: '', type: 'income' });
+    
+    return React.createElement('div', {
+      className: 'p-6'
+    },
+      React.createElement('h1', {
+        className: 'text-3xl font-bold mb-8 bg-gradient-to-r from-blue-600 to-yellow-500 bg-clip-text text-transparent'
+      }, 'Kassenverwaltung'),
+      React.createElement('div', {
+        className: 'bg-white p-6 rounded-2xl shadow-lg mb-8 border border-gray-100'
+      },
+        React.createElement('div', {
+          className: 'text-center mb-8'
+        },
+          React.createElement('h2', {
+            className: 'text-4xl font-bold text-green-600 mb-2'
+          }, `${cash.balance.toFixed(2)}€`),
+          React.createElement('p', {
+            className: 'text-gray-600'
+          }, 'Aktueller Kassenstand')
+        ),
+        React.createElement('h3', {
+          className: 'text-xl font-semibold mb-6 text-gray-800'
+        }, 'Neue Transaktion'),
+        React.createElement('div', {
+          className: 'grid grid-cols-1 md:grid-cols-3 gap-4'
+        },
+          React.createElement('input', {
+            type: 'number',
+            step: '0.01',
+            placeholder: 'Betrag',
+            value: transaction.amount,
+            onChange: (e) => setTransaction({ ...transaction, amount: e.target.value }),
+            className: 'px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500'
+          }),
+          React.createElement('input', {
+            type: 'text',
+            placeholder: 'Beschreibung',
+            value: transaction.description,
+            onChange: (e) => setTransaction({ ...transaction, description: e.target.value }),
+            className: 'px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500'
+          }),
+          React.createElement('select', {
+            value: transaction.type,
+            onChange: (e) => setTransaction({ ...transaction, type: e.target.value }),
+            className: 'px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500'
+          },
+            React.createElement('option', { value: 'income' }, 'Einnahme'),
+            React.createElement('option', { value: 'expense' }, 'Ausgabe')
+          )
+        ),
+        React.createElement('button', {
+          onClick: () => {
+            if (transaction.amount && transaction.description) {
+              addCashTransaction(transaction.amount, transaction.description, transaction.type);
+              setTransaction({ amount: '', description: '', type: 'income' });
+            }
+          },
+          className: 'mt-6 bg-gradient-to-r from-blue-600 to-yellow-500 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 font-semibold'
+        }, 'Transaktion hinzufügen')
+      ),
+      React.createElement('div', {
+        className: 'bg-white p-6 rounded-2xl shadow-lg border border-gray-100'
+      },
+        React.createElement('div', {
+          className: 'flex justify-between items-center mb-6'
+        },
+          React.createElement('h3', {
+            className: 'text-xl font-semibold text-gray-800'
+          }, 'Kassenhistorie'),
+          React.createElement('button', {
+            onClick: clearCashHistory,
+            className: 'bg-red-600 text-white px-4 py-2 rounded-xl hover:bg-red-700 transition-all duration-200 font-medium'
+          }, 'Historie löschen')
+        ),
+        React.createElement('div', {
+          className: 'space-y-3 max-h-96 overflow-y-auto'
+        },
+          cash.history.map(entry => 
+            React.createElement('div', {
+              key: entry.id,
+              className: 'flex justify-between items-center p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all duration-200'
+            },
+              React.createElement('div', null,
+                React.createElement('p', {
+                  className: 'font-medium text-gray-800'
+                }, entry.description),
+                React.createElement('p', {
+                  className: 'text-sm text-gray-600'
+                }, new Date(entry.date).toLocaleDateString('de-DE'))
+              ),
+              React.createElement('span', {
+                className: `font-bold text-lg ${
+                  entry.type === 'income' ? 'text-green-600' : 'text-red-600'
+                }`
+              }, `${entry.type === 'income' ? '+' : '-'}${entry.amount.toFixed(2)}€`)
+            )
+          )
+        )
+      )
+    );
+  };
+
   // Main Content
   const renderPage = () => {
     switch (currentPage) {
       case 'downloads': return React.createElement(DownloadsPage);
-      case 'games': return React.createElement('div', { className: 'p-6' }, 'Spielplan - Coming Soon');
-      case 'members': return React.createElement('div', { className: 'p-6' }, 'Mitglieder - Coming Soon');
-      case 'drinks': return React.createElement('div', { className: 'p-6' }, 'Getränke - Coming Soon');
-      case 'cash': return React.createElement('div', { className: 'p-6' }, 'Kasse - Coming Soon');
+      case 'games': return React.createElement(GamesPage);
+      case 'members': return React.createElement(MembersPage);
+      case 'drinks': return React.createElement(DrinksPage);
+      case 'cash': return React.createElement(CashPage);
       default: return React.createElement(DownloadsPage);
     }
   };

@@ -2,8 +2,8 @@ services:
   - type: web
     name: mtv-schwabstedt-darts
     env: node
-    buildCommand: npm install && cd frontend && npm install && npm run build
-    startCommand: cd backend && npm install && npm start
+    buildCommand: npm install && cd frontend && npm install && npm run build && cd ../backend && npm install
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production

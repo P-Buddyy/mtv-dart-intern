@@ -233,7 +233,7 @@ app.post('/api/games', (req, res) => {
 
 app.put('/api/games/:id', (req, res) => {
   const { id } = req.params;
-  const { date, time, opponent, location, participants } = req.body;
+  const { date, time, opponent, location, participants, result } = req.body;
   
   const game = db.games.find(g => g.id === parseInt(id));
   if (!game) {
@@ -245,11 +245,27 @@ app.put('/api/games/:id', (req, res) => {
     time,
     opponent,
     location,
-    participants: participants || []
+    participants: participants || [],
+    result: result || game.result
   });
   saveDB();
   
   res.json({ message: 'Spiel aktualisiert' });
+});
+
+app.put('/api/games/:id/result', (req, res) => {
+  const { id } = req.params;
+  const { result } = req.body;
+  
+  const game = db.games.find(g => g.id === parseInt(id));
+  if (!game) {
+    return res.status(404).json({ error: 'Spiel nicht gefunden' });
+  }
+
+  game.result = result;
+  saveDB();
+  
+  res.json({ message: 'Ergebnis aktualisiert' });
 });
 
 app.delete('/api/games/:id', (req, res) => {

@@ -127,6 +127,18 @@ function App() {
     }
   };
 
+  const updateGameResult = async (id, result) => {
+    try {
+      await apiCall(`/games/${id}/result`, {
+        method: 'PUT',
+        body: JSON.stringify({ result })
+      });
+      await loadGames();
+    } catch (error) {
+      console.error('Fehler beim Aktualisieren des Ergebnisses:', error);
+    }
+  };
+
   const updateGame = async (id, gameData) => {
     try {
       await apiCall(`/games/${id}`, {
@@ -165,6 +177,18 @@ function App() {
       });
     } catch (error) {
       console.error('Fehler beim Laden der Getränke:', error);
+    }
+  };
+
+  const updateDrinkPrices = async (prices) => {
+    try {
+      await apiCall('/drinks/prices', {
+        method: 'PUT',
+        body: JSON.stringify({ prices })
+      });
+      await loadDrinks();
+    } catch (error) {
+      console.error('Fehler beim Aktualisieren der Preise:', error);
     }
   };
 
@@ -438,6 +462,10 @@ function App() {
         setEditingGame(null);
       }
     };
+
+    const updateResult = (gameId, result) => {
+      updateGameResult(gameId, result);
+    };
     
     return React.createElement('div', {
       className: 'p-4 lg:p-6'
@@ -640,9 +668,39 @@ function App() {
                     React.createElement('p', {
                       className: 'text-gray-500'
                     }, `${game.time} Uhr - ${game.location === 'home' ? 'Heim' : 'Auswärts'}`),
-                    game.result && React.createElement('p', {
-                      className: 'text-lg font-semibold text-green-600 mt-2'
-                    }, `Ergebnis: ${game.result}`)
+                    React.createElement('div', {
+                      className: 'mt-2'
+                    },
+                      game.result ? 
+                        React.createElement('p', {
+                          className: 'text-lg font-semibold text-green-600'
+                        }, `Ergebnis: ${game.result}`) :
+                        React.createElement('div', {
+                          className: 'flex gap-2 items-center'
+                        },
+                          React.createElement('input', {
+                            type: 'text',
+                            placeholder: 'Ergebnis (z.B. 3:2)',
+                            onKeyPress: (e) => {
+                              if (e.key === 'Enter') {
+                                updateResult(game.id, e.target.value);
+                                e.target.value = '';
+                              }
+                            },
+                            className: 'px-3 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm'
+                          }),
+                          React.createElement('button', {
+                            onClick: (e) => {
+                              const input = e.target.previousSibling;
+                              if (input.value.trim()) {
+                                updateResult(game.id, input.value.trim());
+                                input.value = '';
+                              }
+                            },
+                            className: 'bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition-all duration-200 text-sm'
+                          }, 'Speichern')
+                        )
+                    )
                   ),
                   React.createElement('div', {
                     className: 'flex gap-2'
@@ -810,6 +868,9 @@ function App() {
     const [drinkAmounts, setDrinkAmounts] = useState({});
     const [payAmount, setPayAmount] = useState('');
     const [payingMember, setPayingMember] = useState(null);
+    const [editingDrink, setEditingDrink] = useState(null);
+    const [newDrinkName, setNewDrinkName] = useState('');
+    const [newDrinkPrice, setNewDrinkPrice] = useState('');
     
     return React.createElement('div', {
       className: 'p-4 lg:p-6'
@@ -817,6 +878,114 @@ function App() {
       React.createElement('h1', {
         className: 'text-2xl lg:text-3xl font-bold mb-6 lg:mb-8 bg-gradient-to-r from-blue-600 to-yellow-500 bg-clip-text text-transparent'
       }, 'Getränke & Schulden'),
+      // Getränke-Verwaltung
+      React.createElement('div', {
+        className: 'bg-white p-4 lg:p-6 rounded-2xl shadow-lg border border-gray-100 mb-6 lg:mb-8'
+      },
+        React.createElement('h2', {
+          className: 'text-xl font-semibold mb-6 text-gray-800'
+        }, 'Getränke verwalten'),
+        React.createElement('div', {
+          className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6'
+        },
+          React.createElement('input', {
+            type: 'text',
+            placeholder: 'Getränkename',
+            value: newDrinkName,
+            onChange: (e) => setNewDrinkName(e.target.value),
+            className: 'px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500'
+          }),
+          React.createElement('input', {
+            type: 'number',
+            step: '0.01',
+            placeholder: 'Preis (€)',
+            value: newDrinkPrice,
+            onChange: (e) => setNewDrinkPrice(e.target.value),
+            className: 'px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500'
+          }),
+          React.createElement('button', {
+            onClick: () => {
+              if (newDrinkName && newDrinkPrice) {
+                const newPrices = { ...drinks.prices, [newDrinkName]: parseFloat(newDrinkPrice) };
+                updateDrinkPrices(newPrices);
+                setNewDrinkName('');
+                setNewDrinkPrice('');
+              }
+            },
+            className: 'bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 font-semibold'
+          }, 'Hinzufügen')
+        ),
+        React.createElement('div', {
+          className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'
+        },
+          Object.keys(drinks.prices).map(drinkType => 
+            React.createElement('div', {
+              key: drinkType,
+              className: 'flex justify-between items-center p-3 bg-gray-50 rounded-xl'
+            },
+              React.createElement('span', {
+                className: 'font-medium text-gray-700'
+              }, `${drinkType}: ${drinks.prices[drinkType]}€`),
+              React.createElement('div', {
+                className: 'flex gap-2'
+              },
+                React.createElement('button', {
+                  onClick: () => setEditingDrink({ name: drinkType, price: drinks.prices[drinkType] }),
+                  className: 'bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition-all duration-200 text-sm'
+                }, 'Bearbeiten'),
+                React.createElement('button', {
+                  onClick: () => {
+                    if (confirm(`Möchtest du ${drinkType} wirklich löschen?`)) {
+                      const newPrices = { ...drinks.prices };
+                      delete newPrices[drinkType];
+                      updateDrinkPrices(newPrices);
+                    }
+                  },
+                  className: 'bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition-all duration-200 text-sm'
+                }, 'Löschen')
+              )
+            )
+          )
+        )
+      ),
+      
+      // Getränke bearbeiten Modal
+      editingDrink && React.createElement('div', {
+        className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'
+      },
+        React.createElement('div', {
+          className: 'bg-white p-6 rounded-2xl shadow-2xl max-w-md w-full'
+        },
+          React.createElement('h3', {
+            className: 'text-xl font-semibold mb-4'
+          }, `${editingDrink.name} bearbeiten`),
+          React.createElement('input', {
+            type: 'number',
+            step: '0.01',
+            placeholder: 'Neuer Preis (€)',
+            value: editingDrink.price,
+            onChange: (e) => setEditingDrink({ ...editingDrink, price: e.target.value }),
+            className: 'w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 mb-4'
+          }),
+          React.createElement('div', {
+            className: 'flex gap-3'
+          },
+            React.createElement('button', {
+              onClick: () => {
+                const newPrices = { ...drinks.prices, [editingDrink.name]: parseFloat(editingDrink.price) };
+                updateDrinkPrices(newPrices);
+                setEditingDrink(null);
+              },
+              className: 'flex-1 bg-gradient-to-r from-green-600 to-green-700 text-white px-4 py-3 rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 font-semibold'
+            }, 'Speichern'),
+            React.createElement('button', {
+              onClick: () => setEditingDrink(null),
+              className: 'flex-1 bg-gray-600 text-white px-4 py-3 rounded-xl hover:bg-gray-700 transition-all duration-200 font-semibold'
+            }, 'Abbrechen')
+          )
+        )
+      ),
+      
       React.createElement('div', {
         className: 'grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8'
       },

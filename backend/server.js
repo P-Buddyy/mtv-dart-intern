@@ -346,17 +346,10 @@ app.delete('/api/cash/history', (req, res) => {
   res.json({ message: 'Kassenhistorie gelöscht' });
 });
 
-// Statische Dateien für Production
-if (process.env.NODE_ENV === 'production') {
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-  });
-} else {
-  // Fallback für Development - serve index.html für alle Frontend-Routen
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/index.html'));
-  });
-}
+// Fallback für alle Frontend-Routen - serve index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/index.html'));
+});
 
 // Error Handler
 app.use((err, req, res, next) => {

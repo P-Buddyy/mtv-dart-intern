@@ -77,8 +77,17 @@ app.use('/api/', limiter);
 
 app.use(express.json({ limit: '10mb' }));
 
-// Serve frontend files from dist folder
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
+// Serve frontend files directly from frontend folder
+app.use(express.static(path.join(__dirname, '../frontend')));
+app.use(express.static(path.join(__dirname, '../frontend/src')));
+
+// Set MIME types for JSX files
+app.use((req, res, next) => {
+  if (req.url.endsWith('.jsx')) {
+    res.setHeader('Content-Type', 'text/babel');
+  }
+  next();
+});
 
 // JWT Middleware für geschützte Routen
 const authenticateToken = (req, res, next) => {
@@ -343,7 +352,7 @@ app.delete('/api/cash/history', (req, res) => {
 
 // Fallback für alle Frontend-Routen - serve index.html
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+  res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
 // Error Handler

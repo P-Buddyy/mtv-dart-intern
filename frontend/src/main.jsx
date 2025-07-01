@@ -213,8 +213,8 @@ function App() {
       className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
     },
       [
-        { name: 'Getränkeliste Gegner PDF', file: 'Getränkeliste_Gegner.pdf', icon: '📄' },
-        { name: 'Getränkeliste Gegner Word', file: 'Getränkeliste_Gegner.docx', icon: '📝' },
+        { name: 'Getränkeliste Gegner PDF', file: 'Liste_PDF.pdf', icon: '📄' },
+        { name: 'Getränkeliste Gegner Word', file: 'Liste_Word.docx', icon: '📝' },
         { name: 'Spielbericht', file: 'Spielbericht.pdf', icon: '📊' }
       ].map(item => 
         React.createElement('div', {
@@ -231,7 +231,7 @@ function App() {
           ),
           React.createElement('a', {
             href: `/Listen/${item.file}`,
-            download: true,
+            download: item.file,
             className: 'inline-block bg-gradient-to-r from-blue-600 to-yellow-500 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 font-semibold'
           }, 'Herunterladen')
         )
@@ -256,13 +256,29 @@ function App() {
       return date.toLocaleDateString('de-DE');
     };
 
-    const addParticipant = (gameId, memberId) => {
-      if (editingGame && editingGame.id === gameId) {
+    const addParticipant = (gameId, memberId, isNewGame = false) => {
+      if (isNewGame) {
+        const updatedParticipants = [...newGame.participants];
+        if (!updatedParticipants.includes(memberId)) {
+          updatedParticipants.push(memberId);
+          setNewGame({ ...newGame, participants: updatedParticipants });
+        }
+      } else if (editingGame && editingGame.id === gameId) {
         const updatedParticipants = [...editingGame.participants];
         if (!updatedParticipants.includes(memberId)) {
           updatedParticipants.push(memberId);
           setEditingGame({ ...editingGame, participants: updatedParticipants });
         }
+      }
+    };
+
+    const removeParticipant = (gameId, memberId, isNewGame = false) => {
+      if (isNewGame) {
+        const updatedParticipants = newGame.participants.filter(id => id !== memberId);
+        setNewGame({ ...newGame, participants: updatedParticipants });
+      } else if (editingGame && editingGame.id === gameId) {
+        const updatedParticipants = editingGame.participants.filter(id => id !== memberId);
+        setEditingGame({ ...editingGame, participants: updatedParticipants });
       }
     };
 
@@ -293,7 +309,7 @@ function App() {
           className: 'text-xl font-semibold mb-6 text-gray-800'
         }, 'Neues Spiel hinzufügen'),
         React.createElement('div', {
-          className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
+          className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6'
         },
           React.createElement('input', {
             type: 'date',
@@ -330,9 +346,56 @@ function App() {
             className: 'px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500'
           })
         ),
+        // Teilnehmerauswahl für neues Spiel
+        React.createElement('div', {
+          className: 'mb-6'
+        },
+          React.createElement('h4', {
+            className: 'font-semibold mb-3 text-gray-700'
+          }, 'Teilnehmer auswählen:'),
+          React.createElement('div', {
+            className: 'flex flex-wrap gap-2'
+          },
+            members.filter(m => m.status === 'active').map(member =>
+              React.createElement('button', {
+                key: member.id,
+                onClick: () => addParticipant(null, member.id, true),
+                className: `px-3 py-1 rounded-full text-sm transition-all duration-200 ${
+                  newGame.participants.includes(member.id)
+                    ? 'bg-yellow-500 text-blue-900 font-semibold'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`
+              }, member.name)
+            )
+          ),
+          newGame.participants.length > 0 && React.createElement('div', {
+            className: 'mt-3'
+          },
+            React.createElement('p', {
+              className: 'text-sm text-gray-600 mb-2'
+            }, 'Ausgewählte Teilnehmer:'),
+            React.createElement('div', {
+              className: 'flex flex-wrap gap-2'
+            },
+              newGame.participants.map(participantId => {
+                const member = members.find(m => m.id === participantId);
+                return member ? React.createElement('span', {
+                  key: participantId,
+                  className: 'bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm flex items-center gap-1'
+                },
+                  member.name,
+                  React.createElement('button', {
+                    onClick: () => removeParticipant(null, participantId, true),
+                    className: 'text-yellow-600 hover:text-yellow-800 font-bold'
+                  }, '×')
+                ) : null;
+              })
+            )
+          )
+        ),
         React.createElement('button', {
           onClick: saveGame,
-          className: 'mt-6 bg-gradient-to-r from-blue-600 to-yellow-500 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 font-semibold'
+          className: 'bg-gradient-to-r from-blue-600 to-yellow-500 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 font-semibold'
         }, 'Spiel hinzufügen')
       ),
       React.createElement('div', {

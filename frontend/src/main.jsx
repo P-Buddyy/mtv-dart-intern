@@ -878,9 +878,88 @@ function App() {
       React.createElement('h1', {
         className: 'text-2xl lg:text-3xl font-bold mb-6 lg:mb-8 bg-gradient-to-r from-blue-600 to-yellow-500 bg-clip-text text-transparent'
       }, 'Getränke & Schulden'),
+      React.createElement('div', {
+        className: 'grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8'
+      },
+        // Getränke hinzufügen
+        React.createElement('div', {
+          className: 'bg-white p-6 rounded-2xl shadow-lg border border-gray-100'
+        },
+          React.createElement('h2', {
+            className: 'text-xl font-semibold mb-6 text-gray-800'
+          }, 'Getränke hinzufügen'),
+          React.createElement('select', {
+            value: selectedMember,
+            onChange: (e) => setSelectedMember(e.target.value),
+            className: 'w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 mb-6'
+          },
+            React.createElement('option', { value: '' }, 'Mitglied auswählen'),
+            members.filter(m => m.status === 'active').map(member =>
+              React.createElement('option', { key: member.id, value: member.id }, member.name)
+            )
+          ),
+          (drinks.prices ? Object.keys(drinks.prices) : []).map(drinkType => 
+            React.createElement('div', {
+              key: drinkType,
+              className: 'flex justify-between items-center mb-4 p-3 bg-gray-50 rounded-xl'
+            },
+              React.createElement('span', {
+                className: 'font-medium text-gray-700'
+              }, `${drinkType} (${drinks.prices[drinkType]}€)`),
+              React.createElement('input', {
+                type: 'number',
+                min: '0',
+                value: drinkAmounts[drinkType] || 0,
+                onChange: (e) => setDrinkAmounts({ ...drinkAmounts, [drinkType]: parseInt(e.target.value) || 0 }),
+                className: 'w-20 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500'
+              })
+            )
+          ),
+          React.createElement('button', {
+            onClick: () => {
+              if (selectedMember && Object.values(drinkAmounts).some(v => v > 0)) {
+                addDrinks(parseInt(selectedMember), drinkAmounts);
+                setDrinkAmounts({});
+              }
+            },
+            className: 'mt-6 w-full bg-gradient-to-r from-blue-600 to-yellow-500 text-white px-6 py-4 lg:py-3 rounded-xl hover:from-blue-700 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 font-semibold text-lg lg:text-base'
+          }, 'Hinzufügen')
+        ),
+        // Schulden anzeigen und bezahlen
+        React.createElement('div', {
+          className: 'bg-white p-6 rounded-2xl shadow-lg border border-gray-100'
+        },
+          React.createElement('h2', {
+            className: 'text-xl font-semibold mb-6 text-gray-800'
+          }, 'Schulden & Bezahlung'),
+          members.filter(m => m.status === 'active').map(member => {
+            const debt = (drinks.debts && drinks.debts[member.id]) || 0;
+            return React.createElement('div', {
+              key: member.id,
+              className: 'flex justify-between items-center mb-4 p-4 bg-gray-50 rounded-xl'
+            },
+              React.createElement('div', null,
+                React.createElement('span', {
+                  className: 'font-medium text-gray-700'
+                }, member.name),
+                React.createElement('span', {
+                  className: `block font-bold text-lg ${
+                    debt > 0 ? 'text-red-600' : debt < 0 ? 'text-green-600' : 'text-gray-600'
+                  }`
+                }, `${debt.toFixed(2)}€`)
+              ),
+              React.createElement('button', {
+                onClick: () => setPayingMember(member),
+                className: 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-4 py-2 rounded-xl hover:from-yellow-600 hover:to-yellow-700 transition-all duration-200 font-medium'
+              }, 'Bezahlen')
+            );
+          })
+        )
+      ),
+      
       // Getränke-Verwaltung
       React.createElement('div', {
-        className: 'bg-white p-4 lg:p-6 rounded-2xl shadow-lg border border-gray-100 mb-6 lg:mb-8'
+        className: 'bg-white p-4 lg:p-6 rounded-2xl shadow-lg border border-gray-100 mt-6 lg:mt-8'
       },
         React.createElement('h2', {
           className: 'text-xl font-semibold mb-6 text-gray-800'
@@ -983,85 +1062,6 @@ function App() {
               className: 'flex-1 bg-gray-600 text-white px-4 py-3 rounded-xl hover:bg-gray-700 transition-all duration-200 font-semibold'
             }, 'Abbrechen')
           )
-        )
-      ),
-      
-      React.createElement('div', {
-        className: 'grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8'
-      },
-        // Getränke hinzufügen
-        React.createElement('div', {
-          className: 'bg-white p-6 rounded-2xl shadow-lg border border-gray-100'
-        },
-          React.createElement('h2', {
-            className: 'text-xl font-semibold mb-6 text-gray-800'
-          }, 'Getränke hinzufügen'),
-          React.createElement('select', {
-            value: selectedMember,
-            onChange: (e) => setSelectedMember(e.target.value),
-            className: 'w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 mb-6'
-          },
-            React.createElement('option', { value: '' }, 'Mitglied auswählen'),
-            members.filter(m => m.status === 'active').map(member =>
-              React.createElement('option', { key: member.id, value: member.id }, member.name)
-            )
-          ),
-          (drinks.prices ? Object.keys(drinks.prices) : []).map(drinkType => 
-            React.createElement('div', {
-              key: drinkType,
-              className: 'flex justify-between items-center mb-4 p-3 bg-gray-50 rounded-xl'
-            },
-              React.createElement('span', {
-                className: 'font-medium text-gray-700'
-              }, `${drinkType} (${drinks.prices[drinkType]}€)`),
-              React.createElement('input', {
-                type: 'number',
-                min: '0',
-                value: drinkAmounts[drinkType] || 0,
-                onChange: (e) => setDrinkAmounts({ ...drinkAmounts, [drinkType]: parseInt(e.target.value) || 0 }),
-                className: 'w-20 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500'
-              })
-            )
-          ),
-          React.createElement('button', {
-            onClick: () => {
-              if (selectedMember && Object.values(drinkAmounts).some(v => v > 0)) {
-                addDrinks(parseInt(selectedMember), drinkAmounts);
-                setDrinkAmounts({});
-              }
-            },
-            className: 'mt-6 w-full bg-gradient-to-r from-blue-600 to-yellow-500 text-white px-6 py-4 lg:py-3 rounded-xl hover:from-blue-700 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 font-semibold text-lg lg:text-base'
-          }, 'Hinzufügen')
-        ),
-        // Schulden anzeigen und bezahlen
-        React.createElement('div', {
-          className: 'bg-white p-6 rounded-2xl shadow-lg border border-gray-100'
-        },
-          React.createElement('h2', {
-            className: 'text-xl font-semibold mb-6 text-gray-800'
-          }, 'Schulden & Bezahlung'),
-          members.filter(m => m.status === 'active').map(member => {
-            const debt = (drinks.debts && drinks.debts[member.id]) || 0;
-            return React.createElement('div', {
-              key: member.id,
-              className: 'flex justify-between items-center mb-4 p-4 bg-gray-50 rounded-xl'
-            },
-              React.createElement('div', null,
-                React.createElement('span', {
-                  className: 'font-medium text-gray-700'
-                }, member.name),
-                React.createElement('span', {
-                  className: `block font-bold text-lg ${
-                    debt > 0 ? 'text-red-600' : debt < 0 ? 'text-green-600' : 'text-gray-600'
-                  }`
-                }, `${debt.toFixed(2)}€`)
-              ),
-              React.createElement('button', {
-                onClick: () => setPayingMember(member),
-                className: 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-4 py-2 rounded-xl hover:from-yellow-600 hover:to-yellow-700 transition-all duration-200 font-medium'
-              }, 'Bezahlen')
-            );
-          })
         )
       ),
       

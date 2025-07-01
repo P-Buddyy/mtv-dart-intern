@@ -81,8 +81,8 @@ app.use(express.json({ limit: '10mb' }));
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../frontend/dist')));
 } else {
-  app.use(express.static(path.join(__dirname, '../frontend/src')));
   app.use(express.static(path.join(__dirname, '../frontend')));
+  app.use(express.static(path.join(__dirname, '../frontend/src')));
 }
 
 // JWT Middleware für geschützte Routen
@@ -350,6 +350,11 @@ app.delete('/api/cash/history', (req, res) => {
 if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+  });
+} else {
+  // Fallback für Development - serve index.html für alle Frontend-Routen
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/index.html'));
   });
 }
 

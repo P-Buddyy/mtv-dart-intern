@@ -4,6 +4,7 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [currentPage, setCurrentPage] = useState('downloads');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // State für Daten
   const [members, setMembers] = useState([]);
@@ -277,9 +278,19 @@ function App() {
     );
   }
 
+  // Mobile Menu Button
+  const MobileMenuButton = () => React.createElement('button', {
+    onClick: () => setIsMobileMenuOpen(!isMobileMenuOpen),
+    className: 'lg:hidden fixed top-4 left-4 z-50 p-2 bg-blue-900 text-white rounded-lg shadow-lg'
+  },
+    React.createElement('span', { className: 'text-xl' }, isMobileMenuOpen ? '✕' : '☰')
+  );
+
   // Sidebar Navigation
   const Sidebar = () => React.createElement('div', {
-    className: 'fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-blue-900 to-blue-800 transform transition-transform duration-300 ease-in-out shadow-2xl'
+    className: `fixed inset-y-0 left-0 z-40 w-64 bg-gradient-to-b from-blue-900 to-blue-800 transform transition-transform duration-300 ease-in-out shadow-2xl lg:translate-x-0 ${
+      isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+    }`
   },
     React.createElement('div', {
       className: 'flex items-center justify-between h-16 px-6 bg-blue-950'
@@ -307,7 +318,10 @@ function App() {
       ].map(item => 
         React.createElement('button', {
           key: item.id,
-          onClick: () => setCurrentPage(item.id),
+          onClick: () => {
+            setCurrentPage(item.id);
+            setIsMobileMenuOpen(false);
+          },
           className: `w-full flex items-center px-6 py-4 text-left transition-all duration-200 transform hover:scale-105 ${
             currentPage === item.id 
               ? 'bg-gradient-to-r from-yellow-500 to-yellow-400 text-blue-900 font-semibold shadow-lg' 
@@ -323,13 +337,13 @@ function App() {
 
   // Downloads Page
   const DownloadsPage = () => React.createElement('div', {
-    className: 'p-6'
+    className: 'p-4 lg:p-6'
   },
     React.createElement('h1', {
-      className: 'text-3xl font-bold mb-8 bg-gradient-to-r from-blue-600 to-yellow-500 bg-clip-text text-transparent'
+      className: 'text-2xl lg:text-3xl font-bold mb-6 lg:mb-8 bg-gradient-to-r from-blue-600 to-yellow-500 bg-clip-text text-transparent'
     }, 'Downloads'),
     React.createElement('div', {
-      className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+      className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6'
     },
       [
         { name: 'Getränkeliste Gegner PDF', file: 'Liste_PDF.pdf', icon: '📄' },
@@ -416,19 +430,19 @@ function App() {
     };
     
     return React.createElement('div', {
-      className: 'p-6'
+      className: 'p-4 lg:p-6'
     },
       React.createElement('h1', {
-        className: 'text-3xl font-bold mb-8 bg-gradient-to-r from-blue-600 to-yellow-500 bg-clip-text text-transparent'
+        className: 'text-2xl lg:text-3xl font-bold mb-6 lg:mb-8 bg-gradient-to-r from-blue-600 to-yellow-500 bg-clip-text text-transparent'
       }, 'Spielplan'),
       React.createElement('div', {
-        className: 'bg-white p-6 rounded-2xl shadow-lg mb-8 border border-gray-100'
+        className: 'bg-white p-4 lg:p-6 rounded-2xl shadow-lg mb-6 lg:mb-8 border border-gray-100'
       },
         React.createElement('h2', {
-          className: 'text-xl font-semibold mb-6 text-gray-800'
+          className: 'text-lg lg:text-xl font-semibold mb-4 lg:mb-6 text-gray-800'
         }, 'Neues Spiel hinzufügen'),
         React.createElement('div', {
-          className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6'
+          className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4 mb-4 lg:mb-6'
         },
           React.createElement('input', {
             type: 'date',
@@ -467,13 +481,13 @@ function App() {
         ),
         // Teilnehmerauswahl für neues Spiel
         React.createElement('div', {
-          className: 'mb-6'
+          className: 'mb-4 lg:mb-6'
         },
           React.createElement('h4', {
-            className: 'font-semibold mb-3 text-gray-700'
+            className: 'font-semibold mb-2 lg:mb-3 text-gray-700'
           }, 'Teilnehmer auswählen:'),
           React.createElement('div', {
-            className: 'flex flex-wrap gap-2'
+            className: 'flex flex-wrap gap-1 lg:gap-2'
           },
             members.filter(m => m.status === 'active').map(member =>
               React.createElement('button', {
@@ -514,7 +528,7 @@ function App() {
         ),
         React.createElement('button', {
           onClick: saveGame,
-          className: 'bg-gradient-to-r from-blue-600 to-yellow-500 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 font-semibold'
+          className: 'bg-gradient-to-r from-blue-600 to-yellow-500 text-white px-6 py-4 lg:py-3 rounded-xl hover:from-blue-700 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 font-semibold text-lg lg:text-base'
         }, 'Spiel hinzufügen')
       ),
       React.createElement('div', {
@@ -661,15 +675,15 @@ function App() {
     const [newMemberName, setNewMemberName] = useState('');
     
     return React.createElement('div', {
-      className: 'p-6'
+      className: 'p-4 lg:p-6'
     },
       React.createElement('h1', {
-        className: 'text-3xl font-bold mb-8 bg-gradient-to-r from-blue-600 to-yellow-500 bg-clip-text text-transparent'
+        className: 'text-2xl lg:text-3xl font-bold mb-6 lg:mb-8 bg-gradient-to-r from-blue-600 to-yellow-500 bg-clip-text text-transparent'
       }, 'Mitgliederverwaltung'),
       
       // Statistiken
       React.createElement('div', {
-        className: 'grid grid-cols-1 md:grid-cols-3 gap-6 mb-8'
+        className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8'
       },
         React.createElement('div', {
           className: 'bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-2xl shadow-lg'
@@ -712,13 +726,13 @@ function App() {
         React.createElement('div', {
           className: 'flex gap-4'
         },
-          React.createElement('input', {
-            type: 'text',
-            placeholder: 'Name des Mitglieds',
-            value: newMemberName,
-            onChange: (e) => setNewMemberName(e.target.value),
-            className: 'flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500'
-          }),
+                      React.createElement('input', {
+              type: 'text',
+              placeholder: 'Name des Mitglieds',
+              value: newMemberName,
+              onChange: (e) => setNewMemberName(e.target.value),
+              className: 'flex-1 px-4 py-4 lg:py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 text-lg lg:text-base'
+            }),
           React.createElement('button', {
             onClick: () => {
               if (newMemberName.trim()) {
@@ -726,7 +740,7 @@ function App() {
                 setNewMemberName('');
               }
             },
-            className: 'bg-gradient-to-r from-blue-600 to-yellow-500 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 font-semibold'
+            className: 'bg-gradient-to-r from-blue-600 to-yellow-500 text-white px-6 py-4 lg:py-3 rounded-xl hover:from-blue-700 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 font-semibold text-lg lg:text-base'
           }, 'Hinzufügen')
         )
       ),
@@ -788,13 +802,13 @@ function App() {
     const [payingMember, setPayingMember] = useState(null);
     
     return React.createElement('div', {
-      className: 'p-6'
+      className: 'p-4 lg:p-6'
     },
       React.createElement('h1', {
-        className: 'text-3xl font-bold mb-8 bg-gradient-to-r from-blue-600 to-yellow-500 bg-clip-text text-transparent'
+        className: 'text-2xl lg:text-3xl font-bold mb-6 lg:mb-8 bg-gradient-to-r from-blue-600 to-yellow-500 bg-clip-text text-transparent'
       }, 'Getränke & Schulden'),
       React.createElement('div', {
-        className: 'grid grid-cols-1 lg:grid-cols-2 gap-8'
+        className: 'grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8'
       },
         // Getränke hinzufügen
         React.createElement('div', {
@@ -837,7 +851,7 @@ function App() {
                 setDrinkAmounts({});
               }
             },
-            className: 'mt-6 w-full bg-gradient-to-r from-blue-600 to-yellow-500 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 font-semibold'
+            className: 'mt-6 w-full bg-gradient-to-r from-blue-600 to-yellow-500 text-white px-6 py-4 lg:py-3 rounded-xl hover:from-blue-700 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 font-semibold text-lg lg:text-base'
           }, 'Hinzufügen')
         ),
         // Schulden anzeigen und bezahlen
@@ -924,29 +938,29 @@ function App() {
     const [transaction, setTransaction] = useState({ amount: '', description: '', type: 'income' });
     
     return React.createElement('div', {
-      className: 'p-6'
+      className: 'p-4 lg:p-6'
     },
       React.createElement('h1', {
-        className: 'text-3xl font-bold mb-8 bg-gradient-to-r from-blue-600 to-yellow-500 bg-clip-text text-transparent'
+        className: 'text-2xl lg:text-3xl font-bold mb-6 lg:mb-8 bg-gradient-to-r from-blue-600 to-yellow-500 bg-clip-text text-transparent'
       }, 'Kassenverwaltung'),
       React.createElement('div', {
-        className: 'bg-white p-6 rounded-2xl shadow-lg mb-8 border border-gray-100'
+        className: 'bg-white p-4 lg:p-6 rounded-2xl shadow-lg mb-6 lg:mb-8 border border-gray-100'
       },
         React.createElement('div', {
-          className: 'text-center mb-8'
+          className: 'text-center mb-6 lg:mb-8'
         },
           React.createElement('h2', {
-            className: 'text-4xl font-bold text-green-600 mb-2'
+            className: 'text-3xl lg:text-4xl font-bold text-green-600 mb-2'
           }, `${cash.balance.toFixed(2)}€`),
           React.createElement('p', {
             className: 'text-gray-600'
           }, 'Aktueller Kassenstand')
         ),
         React.createElement('h3', {
-          className: 'text-xl font-semibold mb-6 text-gray-800'
+          className: 'text-lg lg:text-xl font-semibold mb-4 lg:mb-6 text-gray-800'
         }, 'Neue Transaktion'),
         React.createElement('div', {
-          className: 'grid grid-cols-1 md:grid-cols-3 gap-4'
+          className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4'
         },
           React.createElement('input', {
             type: 'number',
@@ -979,7 +993,7 @@ function App() {
               setTransaction({ amount: '', description: '', type: 'income' });
             }
           },
-          className: 'mt-6 bg-gradient-to-r from-blue-600 to-yellow-500 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 font-semibold'
+          className: 'mt-6 bg-gradient-to-r from-blue-600 to-yellow-500 text-white px-6 py-4 lg:py-3 rounded-xl hover:from-blue-700 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 font-semibold text-lg lg:text-base'
         }, 'Transaktion hinzufügen')
       ),
       React.createElement('div', {
@@ -1043,9 +1057,15 @@ function App() {
   return React.createElement('div', {
     className: 'min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50'
   },
+    React.createElement(MobileMenuButton),
     React.createElement(Sidebar),
+    // Mobile overlay
+    isMobileMenuOpen && React.createElement('div', {
+      onClick: () => setIsMobileMenuOpen(false),
+      className: 'lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30'
+    }),
     React.createElement('div', {
-      className: 'ml-64 p-4'
+      className: 'lg:ml-64 p-4 pt-16 lg:pt-4'
     },
       React.createElement('div', {
         className: 'bg-white rounded-2xl shadow-lg min-h-screen'

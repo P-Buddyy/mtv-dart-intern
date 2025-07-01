@@ -1,122 +1,238 @@
-// Verwende globale Variablen von CDN
-const { React, ReactDOM } = window;
+const { useState, useEffect, useMemo } = React;
 
-// Einfache App-Komponente mit vollständiger Funktionalität
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
-  const [password, setPassword] = React.useState('');
-  const [currentPage, setCurrentPage] = React.useState('downloads');
-  const [members, setMembers] = React.useState([
-    { id: 1, name: 'Max Mustermann', status: 'active' },
-    { id: 2, name: 'Anna Schmidt', status: 'active' }
-  ]);
-  const [games, setGames] = React.useState([]);
-  const [drinks, setDrinks] = React.useState({
-    prices: { Bier: 1.50, Mischung: 2.50, Kurze: 0.50, Softdrinks: 1.00, RedBull: 2.00 },
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState('');
+  const [currentPage, setCurrentPage] = useState('downloads');
+  
+  // State für Daten
+  const [members, setMembers] = useState([]);
+  const [games, setGames] = useState([]);
+  const [drinks, setDrinks] = useState({
+    prices: { bier: 1.50, mischung: 2.50, kurze: 0.50, softdrinks: 1.00, redbull: 2.00 },
     debts: {}
   });
-  const [cash, setCash] = React.useState({ balance: 0, history: [] });
+  const [cash, setCash] = useState({ balance: 0, history: [] });
 
-  const handleLogin = (e) => {
+  // Login Handler
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (password === 'FürDieFarbenBlauGelb') {
-      setIsAuthenticated(true);
-    } else {
-      alert('Falsches Passwort!');
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem('token', data.token);
+        setIsAuthenticated(true);
+        setPassword('');
+      } else {
+        alert('Falsches Passwort!');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      alert('Login-Fehler!');
     }
   };
 
-  const addMember = (name) => {
-    const newId = Math.max(...members.map(m => m.id), 0) + 1;
-    setMembers([...members, { id: newId, name, status: 'active' }]);
-  };
+  // API-Funktionen
+  const API_BASE = '/api';
 
-  const toggleMemberStatus = (id) => {
-    setMembers(members.map(m => 
-      m.id === id ? { ...m, status: m.status === 'active' ? 'inactive' : 'active' } : m
-    ));
-  };
-
-  const deleteMember = (id) => {
-    setMembers(members.filter(m => m.id !== id));
-    const newDebts = { ...drinks.debts };
-    delete newDebts[id];
-    setDrinks({ ...drinks, debts: newDebts });
-  };
-
-  const addGame = (gameData) => {
-    const newId = Math.max(...games.map(g => g.id), 0) + 1;
-    setGames([...games, { ...gameData, id: newId, createdAt: new Date().toISOString() }]);
-  };
-
-  const updateGame = (id, gameData) => {
-    setGames(games.map(g => g.id === id ? { ...g, ...gameData } : g));
-  };
-
-  const deleteGame = (id) => {
-    setGames(games.filter(g => g.id !== id));
-  };
-
-  const addDrinks = (memberId, drinkData) => {
-    const prices = drinks.prices;
-    let totalCost = 0;
-    Object.keys(drinkData).forEach(drinkType => {
-      if (prices[drinkType] && drinkData[drinkType] > 0) {
-        totalCost += prices[drinkType] * drinkData[drinkType];
+  const apiCall = async (endpoint, options = {}) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        ...options.headers
       }
     });
     
-    const newDebts = { ...drinks.debts };
-    newDebts[memberId] = (newDebts[memberId] || 0) + totalCost;
-    setDrinks({ ...drinks, debts: newDebts });
-  };
-
-  const payDrinks = (memberId, amount) => {
-    const newDebts = { ...drinks.debts };
-    newDebts[memberId] = (newDebts[memberId] || 0) - parseFloat(amount);
-    setDrinks({ ...drinks, debts: newDebts });
+    if (!response.ok) {
+      throw new Error(`API-Fehler: ${response.status}`);
+    }
     
-    const newBalance = cash.balance + parseFloat(amount);
-    const newHistory = [
-      {
-        id: Math.max(...cash.history.map(h => h.id), 0) + 1,
-        date: new Date().toISOString(),
-        amount: parseFloat(amount),
-        description: `${members.find(m => m.id === memberId)?.name} hat ${amount}€ Getränke bezahlt`,
-        type: 'income'
-      },
-      ...cash.history.slice(0, 49)
-    ];
-    setCash({ balance: newBalance, history: newHistory });
+    return response.json();
   };
 
-  const addCashTransaction = (amount, description, type) => {
-    const newBalance = type === 'income' ? cash.balance + parseFloat(amount) : cash.balance - parseFloat(amount);
-    const newHistory = [
-      {
-        id: Math.max(...cash.history.map(h => h.id), 0) + 1,
-        date: new Date().toISOString(),
-        amount: parseFloat(amount),
-        description,
-        type
-      },
-      ...cash.history.slice(0, 49)
-    ];
-    setCash({ balance: newBalance, history: newHistory });
-  };
-
-  const clearCashHistory = () => {
-    if (confirm('Möchtest du wirklich die gesamte Kassenhistorie löschen?')) {
-      setCash({ ...cash, history: [] });
+  // Mitglieder-Funktionen
+  const loadMembers = async () => {
+    try {
+      const data = await apiCall('/members');
+      setMembers(data.members);
+    } catch (error) {
+      console.error('Fehler beim Laden der Mitglieder:', error);
     }
   };
 
-  // Mitglieder-Statistiken
-  const memberStats = {
-    total: members.length,
-    active: members.filter(m => m.status === 'active').length,
-    inactive: members.filter(m => m.status === 'inactive').length
+  const addMember = async (name) => {
+    try {
+      await apiCall('/members', {
+        method: 'POST',
+        body: JSON.stringify({ name })
+      });
+      await loadMembers();
+    } catch (error) {
+      console.error('Fehler beim Hinzufügen des Mitglieds:', error);
+    }
   };
+
+  const toggleMemberStatus = async (id) => {
+    try {
+      const member = members.find(m => m.id === id);
+      const newStatus = member.status === 'active' ? 'inactive' : 'active';
+      await apiCall(`/members/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: newStatus })
+      });
+      await loadMembers();
+    } catch (error) {
+      console.error('Fehler beim Ändern des Status:', error);
+    }
+  };
+
+  const deleteMember = async (id) => {
+    try {
+      await apiCall(`/members/${id}`, { method: 'DELETE' });
+      await loadMembers();
+    } catch (error) {
+      console.error('Fehler beim Löschen des Mitglieds:', error);
+    }
+  };
+
+  // Spiele-Funktionen
+  const loadGames = async () => {
+    try {
+      const gamesData = await apiCall('/games');
+      setGames(gamesData);
+    } catch (error) {
+      console.error('Fehler beim Laden der Spiele:', error);
+    }
+  };
+
+  const addGame = async (gameData) => {
+    try {
+      await apiCall('/games', {
+        method: 'POST',
+        body: JSON.stringify(gameData)
+      });
+      await loadGames();
+    } catch (error) {
+      console.error('Fehler beim Hinzufügen des Spiels:', error);
+    }
+  };
+
+  const updateGame = async (id, gameData) => {
+    try {
+      await apiCall(`/games/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(gameData)
+      });
+      await loadGames();
+    } catch (error) {
+      console.error('Fehler beim Aktualisieren des Spiels:', error);
+    }
+  };
+
+  const deleteGame = async (id) => {
+    try {
+      await apiCall(`/games/${id}`, { method: 'DELETE' });
+      await loadGames();
+    } catch (error) {
+      console.error('Fehler beim Löschen des Spiels:', error);
+    }
+  };
+
+  // Getränke-Funktionen
+  const loadDrinks = async () => {
+    try {
+      const drinksData = await apiCall('/drinks');
+      setDrinks(drinksData);
+    } catch (error) {
+      console.error('Fehler beim Laden der Getränke:', error);
+    }
+  };
+
+  const addDrinks = async (memberId, drinkAmounts) => {
+    try {
+      await apiCall('/drinks/add', {
+        method: 'POST',
+        body: JSON.stringify({ memberId, drinks: drinkAmounts })
+      });
+      await loadDrinks();
+    } catch (error) {
+      console.error('Fehler beim Hinzufügen der Getränke:', error);
+    }
+  };
+
+  const payDrinks = async (memberId, amount) => {
+    try {
+      await apiCall('/drinks/pay', {
+        method: 'POST',
+        body: JSON.stringify({ memberId, amount })
+      });
+      await loadDrinks();
+      await loadCash();
+    } catch (error) {
+      console.error('Fehler bei der Bezahlung:', error);
+    }
+  };
+
+  // Kasse-Funktionen
+  const loadCash = async () => {
+    try {
+      const cashData = await apiCall('/cash');
+      setCash(cashData);
+    } catch (error) {
+      console.error('Fehler beim Laden der Kasse:', error);
+    }
+  };
+
+  const addCashTransaction = async (amount, description, type) => {
+    try {
+      await apiCall('/cash/transaction', {
+        method: 'POST',
+        body: JSON.stringify({ amount, description, type })
+      });
+      await loadCash();
+    } catch (error) {
+      console.error('Fehler beim Hinzufügen der Transaktion:', error);
+    }
+  };
+
+  const clearCashHistory = async () => {
+    try {
+      await apiCall('/cash/history', { method: 'DELETE' });
+      await loadCash();
+    } catch (error) {
+      console.error('Fehler beim Löschen der Historie:', error);
+    }
+  };
+
+  // Daten beim Login laden
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadMembers();
+      loadGames();
+      loadDrinks();
+      loadCash();
+    }
+  }, [isAuthenticated]);
+
+  // Mitglieder-Statistiken
+  const memberStats = useMemo(() => {
+    const activeMembers = members.filter(m => m.status === 'active');
+    const inactiveMembers = members.filter(m => m.status === 'inactive');
+    return {
+      total: members.length,
+      active: activeMembers.length,
+      inactive: inactiveMembers.length
+    };
+  }, [members]);
 
   if (!isAuthenticated) {
     return React.createElement('div', {
@@ -172,7 +288,10 @@ function App() {
         className: 'text-white font-bold text-lg'
       }, 'MTV Darts'),
       React.createElement('button', {
-        onClick: () => setIsAuthenticated(false),
+        onClick: () => {
+          localStorage.removeItem('token');
+          setIsAuthenticated(false);
+        },
         className: 'text-blue-200 hover:text-white transition-colors duration-200'
       }, 'Abmelden')
     ),
@@ -241,7 +360,7 @@ function App() {
 
   // Games Page
   const GamesPage = () => {
-    const [newGame, setNewGame] = React.useState({ 
+    const [newGame, setNewGame] = useState({ 
       date: '', 
       time: '', 
       opponent: '', 
@@ -249,7 +368,7 @@ function App() {
       participants: [],
       result: ''
     });
-    const [editingGame, setEditingGame] = React.useState(null);
+    const [editingGame, setEditingGame] = useState(null);
     
     const formatDate = (dateString) => {
       const date = new Date(dateString);
@@ -539,7 +658,7 @@ function App() {
 
   // Members Page
   const MembersPage = () => {
-    const [newMemberName, setNewMemberName] = React.useState('');
+    const [newMemberName, setNewMemberName] = useState('');
     
     return React.createElement('div', {
       className: 'p-6'
@@ -663,10 +782,10 @@ function App() {
 
   // Drinks Page
   const DrinksPage = () => {
-    const [selectedMember, setSelectedMember] = React.useState('');
-    const [drinkAmounts, setDrinkAmounts] = React.useState({});
-    const [payAmount, setPayAmount] = React.useState('');
-    const [payingMember, setPayingMember] = React.useState(null);
+    const [selectedMember, setSelectedMember] = useState('');
+    const [drinkAmounts, setDrinkAmounts] = useState({});
+    const [payAmount, setPayAmount] = useState('');
+    const [payingMember, setPayingMember] = useState(null);
     
     return React.createElement('div', {
       className: 'p-6'
@@ -802,7 +921,7 @@ function App() {
 
   // Cash Page
   const CashPage = () => {
-    const [transaction, setTransaction] = React.useState({ amount: '', description: '', type: 'income' });
+    const [transaction, setTransaction] = useState({ amount: '', description: '', type: 'income' });
     
     return React.createElement('div', {
       className: 'p-6'
@@ -873,7 +992,11 @@ function App() {
             className: 'text-xl font-semibold text-gray-800'
           }, 'Kassenhistorie'),
           React.createElement('button', {
-            onClick: clearCashHistory,
+            onClick: () => {
+              if (confirm('Möchtest du wirklich die gesamte Kassenhistorie löschen?')) {
+                clearCashHistory();
+              }
+            },
             className: 'bg-red-600 text-white px-4 py-2 rounded-xl hover:bg-red-700 transition-all duration-200 font-medium'
           }, 'Historie löschen')
         ),
@@ -918,14 +1041,14 @@ function App() {
   };
 
   return React.createElement('div', {
-    className: 'flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100'
+    className: 'min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50'
   },
     React.createElement(Sidebar),
-    React.createElement('main', {
-      className: 'flex-1 ml-64 transition-all duration-300'
+    React.createElement('div', {
+      className: 'ml-64 p-4'
     },
       React.createElement('div', {
-        className: 'pt-16'
+        className: 'bg-white rounded-2xl shadow-lg min-h-screen'
       },
         renderPage()
       )
@@ -933,9 +1056,5 @@ function App() {
   );
 }
 
-// App rendern
-ReactDOM.createRoot(document.getElementById('root')).render(
-  React.createElement(React.StrictMode, null,
-    React.createElement(App)
-  )
-); 
+// Render the app
+ReactDOM.render(React.createElement(App), document.getElementById('root')); 

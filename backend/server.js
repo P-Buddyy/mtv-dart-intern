@@ -5,6 +5,8 @@ const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
+const http = require('http');
 
 // Umgebungsvariablen laden
 require('dotenv').config();
@@ -37,8 +39,12 @@ let db = {
   }
 };
 
-// Datenbank-Funktionen
+// Robuste Datenbank-Persistierung mit mehreren Fallbacks
 const saveDB = () => {
+  const dbData = JSON.stringify(db, null, 2);
+  let saved = false;
+  
+  // 1. Lokales Dateisystem (primär)
   try {
     const dbPath = path.join(__dirname, 'data', 'db.json');
     const dbDir = path.dirname(dbPath);
@@ -64,24 +70,214 @@ const saveDB = () => {
       }
     }
     
-    fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
-    console.log(`Datenbank erfolgreich gespeichert: ${dbPath}`);
+    fs.writeFileSync(dbPath, dbData);
+    console.log(`Datenbank lokal gespeichert: ${dbPath}`);
+    saved = true;
   } catch (error) {
-    console.error('Fehler beim Speichern der Datenbank:', error);
+    console.error('Fehler beim lokalen Speichern:', error.message);
+  }
+  
+  // 2. Externe Persistierung über JSONBin.io (Fallback)
+  if (process.env.JSONBIN_API_KEY) {
+    try {
+      const jsonbinUrl = 'https://api.jsonbin.io/v3/b';
+      const binId = process.env.JSONBIN_BIN_ID || 'default';
+      
+      const postData = JSON.stringify({
+        members: db.members,
+        games: db.games,
+        drinks: db.drinks,
+        cash: db.cash,
+        lastUpdated: new Date().toISOString()
+      });
+      
+      const options = {
+        hostname: 'api.jsonbin.io',
+        port: 443,
+        path: `/v3/b/${binId}`,
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Master-Key': process.env.JSONBIN_API_KEY,
+          'X-Bin-Name': 'MTV-Darts-Datenbank'
+        }
+      };
+      
+      const req = https.request(options, (res) => {
+        if (res.statusCode === 200) {
+          console.log('Datenbank extern gespeichert (JSONBin.io)');
+          saved = true;
+        } else {
+          console.error('JSONBin.io Fehler:', res.statusCode);
+        }
+      });
+      
+      req.on('error', (error) => {
+        console.error('JSONBin.io Request Fehler:', error.message);
+      });
+      
+      req.write(postData);
+      req.end();
+    } catch (error) {
+      console.error('Fehler bei externer Persistierung:', error.message);
+    }
+  }
+  
+  // 3. GitHub Gist als letzter Fallback (falls konfiguriert)
+  if (process.env.GITHUB_TOKEN && !saved) {
+    try {
+      const gistId = process.env.GITHUB_GIST_ID;
+      if (gistId) {
+        const gistData = {
+          files: {
+            'mtv-darts-db.json': {
+              content: dbData
+            }
+          }
+        };
+        
+        const options = {
+          hostname: 'api.github.com',
+          port: 443,
+          path: `/gists/${gistId}`,
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `token ${process.env.GITHUB_TOKEN}`,
+            'User-Agent': 'MTV-Darts-App'
+          }
+        };
+        
+        const req = https.request(options, (res) => {
+          if (res.statusCode === 200) {
+            console.log('Datenbank in GitHub Gist gespeichert');
+            saved = true;
+          } else {
+            console.error('GitHub Gist Fehler:', res.statusCode);
+          }
+        });
+        
+        req.on('error', (error) => {
+          console.error('GitHub Gist Request Fehler:', error.message);
+        });
+        
+        req.write(JSON.stringify(gistData));
+        req.end();
+      }
+    } catch (error) {
+      console.error('Fehler bei GitHub Gist Persistierung:', error.message);
+    }
+  }
+  
+  if (!saved) {
+    console.error('WARNUNG: Datenbank konnte nirgendwo gespeichert werden!');
   }
 };
 
 const loadDB = () => {
+  let loaded = false;
+  
+  // 1. Versuche lokales Dateisystem
   const dbPath = path.join(__dirname, 'data', 'db.json');
   if (fs.existsSync(dbPath)) {
     try {
       db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-      console.log(`Datenbank erfolgreich geladen: ${dbPath}`);
+      console.log(`Datenbank lokal geladen: ${dbPath}`);
+      loaded = true;
     } catch (error) {
-      console.log('Fehler beim Laden der Datenbank, verwende Standarddaten:', error.message);
+      console.log('Fehler beim Laden der lokalen Datenbank:', error.message);
     }
-  } else {
-    console.log('Keine vorhandene Datenbank gefunden, verwende Standarddaten');
+  }
+  
+  // 2. Falls lokal nicht verfügbar, versuche JSONBin.io
+  if (!loaded && process.env.JSONBIN_API_KEY) {
+    try {
+      const binId = process.env.JSONBIN_BIN_ID || 'default';
+      const options = {
+        hostname: 'api.jsonbin.io',
+        port: 443,
+        path: `/v3/b/${binId}/latest`,
+        method: 'GET',
+        headers: {
+          'X-Master-Key': process.env.JSONBIN_API_KEY
+        }
+      };
+      
+      const req = https.request(options, (res) => {
+        let data = '';
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        res.on('end', () => {
+          try {
+            const response = JSON.parse(data);
+            if (response.record) {
+              db = response.record;
+              console.log('Datenbank von JSONBin.io geladen');
+              loaded = true;
+            }
+          } catch (error) {
+            console.error('Fehler beim Parsen der JSONBin.io Antwort:', error.message);
+          }
+        });
+      });
+      
+      req.on('error', (error) => {
+        console.error('JSONBin.io Request Fehler:', error.message);
+      });
+      
+      req.end();
+    } catch (error) {
+      console.error('Fehler beim Laden von JSONBin.io:', error.message);
+    }
+  }
+  
+  // 3. Falls immer noch nicht verfügbar, versuche GitHub Gist
+  if (!loaded && process.env.GITHUB_TOKEN && process.env.GITHUB_GIST_ID) {
+    try {
+      const gistId = process.env.GITHUB_GIST_ID;
+      const options = {
+        hostname: 'api.github.com',
+        port: 443,
+        path: `/gists/${gistId}`,
+        method: 'GET',
+        headers: {
+          'Authorization': `token ${process.env.GITHUB_TOKEN}`,
+          'User-Agent': 'MTV-Darts-App'
+        }
+      };
+      
+      const req = https.request(options, (res) => {
+        let data = '';
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        res.on('end', () => {
+          try {
+            const response = JSON.parse(data);
+            if (response.files && response.files['mtv-darts-db.json']) {
+              db = JSON.parse(response.files['mtv-darts-db.json'].content);
+              console.log('Datenbank von GitHub Gist geladen');
+              loaded = true;
+            }
+          } catch (error) {
+            console.error('Fehler beim Parsen der GitHub Gist Antwort:', error.message);
+          }
+        });
+      });
+      
+      req.on('error', (error) => {
+        console.error('GitHub Gist Request Fehler:', error.message);
+      });
+      
+      req.end();
+    } catch (error) {
+      console.error('Fehler beim Laden von GitHub Gist:', error.message);
+    }
+  }
+  
+  if (!loaded) {
+    console.log('Keine Datenbank gefunden, verwende Standarddaten');
   }
 };
 

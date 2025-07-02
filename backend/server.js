@@ -39,12 +39,36 @@ let db = {
 
 // Datenbank-Funktionen
 const saveDB = () => {
-  const dbPath = path.join(__dirname, 'data', 'db.json');
-  const dbDir = path.dirname(dbPath);
-  if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
+  try {
+    const dbPath = path.join(__dirname, 'data', 'db.json');
+    const dbDir = path.dirname(dbPath);
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
+    }
+    
+    // Erstelle Backup vor dem Speichern
+    if (fs.existsSync(dbPath)) {
+      const backupPath = path.join(__dirname, 'data', `db.backup.${Date.now()}.json`);
+      fs.copyFileSync(dbPath, backupPath);
+      
+      // Lösche alte Backups (behalte nur die letzten 5)
+      const backupFiles = fs.readdirSync(dbDir)
+        .filter(file => file.startsWith('db.backup.'))
+        .sort()
+        .reverse();
+      
+      if (backupFiles.length > 5) {
+        backupFiles.slice(5).forEach(file => {
+          fs.unlinkSync(path.join(dbDir, file));
+        });
+      }
+    }
+    
+    fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+    console.log(`Datenbank erfolgreich gespeichert: ${dbPath}`);
+  } catch (error) {
+    console.error('Fehler beim Speichern der Datenbank:', error);
   }
-  fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
 };
 
 const loadDB = () => {
@@ -52,14 +76,54 @@ const loadDB = () => {
   if (fs.existsSync(dbPath)) {
     try {
       db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+      console.log(`Datenbank erfolgreich geladen: ${dbPath}`);
     } catch (error) {
-      console.log('Fehler beim Laden der Datenbank, verwende Standarddaten');
+      console.log('Fehler beim Laden der Datenbank, verwende Standarddaten:', error.message);
     }
+  } else {
+    console.log('Keine vorhandene Datenbank gefunden, verwende Standarddaten');
   }
 };
 
 // Lade Datenbank beim Start
 loadDB();
+
+// Automatische Datenbank-Persistierung
+let saveInterval;
+let isShuttingDown = false;
+
+// Periodisches Speichern alle 5 Minuten
+const startAutoSave = () => {
+  saveInterval = setInterval(() => {
+    if (!isShuttingDown) {
+      console.log('Automatisches Speichern der Datenbank...');
+      saveDB();
+    }
+  }, 5 * 60 * 1000); // 5 Minuten
+};
+
+// Speichern beim Beenden
+const gracefulShutdown = (signal) => {
+  console.log(`\n${signal} empfangen. Beende Server...`);
+  isShuttingDown = true;
+  
+  if (saveInterval) {
+    clearInterval(saveInterval);
+  }
+  
+  console.log('Speichere Datenbank vor dem Beenden...');
+  saveDB();
+  
+  process.exit(0);
+};
+
+// Event-Listener für verschiedene Beendigungssignale
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGUSR2', () => gracefulShutdown('SIGUSR2')); // Für nodemon
+
+// Starte automatisches Speichern
+startAutoSave();
 
 // Middleware
 app.use(helmet({
@@ -124,6 +188,17 @@ const authenticateToken = (req, res, next) => {
 // Health Check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// Backup Route (nur für Admin)
+app.post('/api/backup', authenticateToken, (req, res) => {
+  try {
+    saveDB();
+    res.json({ message: 'Backup erfolgreich erstellt' });
+  } catch (error) {
+    console.error('Backup-Fehler:', error);
+    res.status(500).json({ error: 'Fehler beim Erstellen des Backups' });
+  }
 });
 
 // Login Route

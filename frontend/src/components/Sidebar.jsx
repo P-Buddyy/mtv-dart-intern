@@ -8,6 +8,7 @@ const navItems = [
   { to: '/games', label: 'Spielplan', icon: '🎯' },
   { to: '/members', label: 'Mitglieder', icon: '👥' },
   { to: '/cash', label: 'Getränke & Kasse', icon: '🍻' },
+  { to: '/backup', label: 'Backup', icon: '💾' },
 ];
 
 export default function Sidebar() {

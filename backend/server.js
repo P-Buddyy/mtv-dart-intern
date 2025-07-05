@@ -397,6 +397,151 @@ app.post('/api/backup', authenticateToken, (req, res) => {
   }
 });
 
+// Backup Download Route - Erstellt eine JSON-Datei zum Download
+app.get('/api/backup/download', authenticateToken, (req, res) => {
+  try {
+    // Erstelle Backup-Daten mit Metadaten
+    const backupData = {
+      version: '1.0',
+      createdAt: new Date().toISOString(),
+      app: 'MTV Darts App',
+      data: {
+        members: db.members,
+        games: db.games,
+        drinks: db.drinks,
+        cash: db.cash
+      }
+    };
+    
+    // Erstelle Dateinamen mit Datum
+    const date = new Date().toISOString().split('T')[0];
+    const filename = `mtv-darts-backup-${date}.json`;
+    
+    // Setze Header für Download
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    
+    // Sende Daten
+    res.json(backupData);
+    
+    console.log(`Backup-Download erstellt: ${filename}`);
+  } catch (error) {
+    console.error('Backup-Download Fehler:', error);
+    res.status(500).json({ error: 'Fehler beim Erstellen des Backup-Downloads' });
+  }
+});
+
+// Backup Upload Route - Stellt Daten aus einer JSON-Datei wieder her
+app.post('/api/backup/upload', authenticateToken, (req, res) => {
+  try {
+    const { backupData } = req.body;
+    
+    if (!backupData) {
+      return res.status(400).json({ error: 'Keine Backup-Daten bereitgestellt' });
+    }
+    
+    // Validiere Backup-Daten
+    if (!backupData.data || !backupData.data.members || !backupData.data.games || 
+        !backupData.data.drinks || !backupData.data.cash) {
+      return res.status(400).json({ error: 'Ungültiges Backup-Format' });
+    }
+    
+    // Erstelle Backup der aktuellen Daten vor dem Wiederherstellen
+    const currentBackup = {
+      version: '1.0',
+      createdAt: new Date().toISOString(),
+      app: 'MTV Darts App',
+      data: {
+        members: db.members,
+        games: db.games,
+        drinks: db.drinks,
+        cash: db.cash
+      }
+    };
+    
+    // Speichere aktuelles Backup
+    const backupPath = path.join(__dirname, 'data', `pre-restore-backup-${Date.now()}.json`);
+    const backupDir = path.dirname(backupPath);
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+    fs.writeFileSync(backupPath, JSON.stringify(currentBackup, null, 2));
+    
+    // Stelle Daten wieder her
+    db.members = backupData.data.members;
+    db.games = backupData.data.games;
+    db.drinks = backupData.data.drinks;
+    db.cash = backupData.data.cash;
+    
+    // Speichere wiederhergestellte Daten
+    saveDB();
+    
+    console.log('Backup erfolgreich wiederhergestellt');
+    res.json({ 
+      message: 'Backup erfolgreich wiederhergestellt',
+      restoredFrom: backupData.createdAt,
+      currentBackup: backupPath
+    });
+    
+  } catch (error) {
+    console.error('Backup-Upload Fehler:', error);
+    res.status(500).json({ error: 'Fehler beim Wiederherstellen des Backups' });
+  }
+});
+
+// Backup-Validierung Route - Prüft Backup-Datei ohne Wiederherstellung
+app.post('/api/backup/validate', authenticateToken, (req, res) => {
+  try {
+    const { backupData } = req.body;
+    
+    if (!backupData) {
+      return res.status(400).json({ error: 'Keine Backup-Daten bereitgestellt' });
+    }
+    
+    // Validiere Struktur
+    const validation = {
+      isValid: false,
+      errors: [],
+      info: {}
+    };
+    
+    // Prüfe erforderliche Felder
+    if (!backupData.data) {
+      validation.errors.push('Keine Daten gefunden');
+    } else {
+      if (!backupData.data.members) validation.errors.push('Mitgliederdaten fehlen');
+      if (!backupData.data.games) validation.errors.push('Spieldaten fehlen');
+      if (!backupData.data.drinks) validation.errors.push('Getränkedaten fehlen');
+      if (!backupData.data.cash) validation.errors.push('Kassendaten fehlen');
+    }
+    
+    // Prüfe Version
+    if (!backupData.version) {
+      validation.errors.push('Version fehlt');
+    }
+    
+    // Sammle Informationen
+    if (backupData.data) {
+      validation.info = {
+        createdAt: backupData.createdAt,
+        version: backupData.version,
+        membersCount: backupData.data.members?.length || 0,
+        gamesCount: backupData.data.games?.length || 0,
+        hasDrinksPrices: !!backupData.data.drinks?.prices,
+        hasCashBalance: typeof backupData.data.cash?.balance === 'number'
+      };
+    }
+    
+    validation.isValid = validation.errors.length === 0;
+    
+    res.json(validation);
+    
+  } catch (error) {
+    console.error('Backup-Validierung Fehler:', error);
+    res.status(500).json({ error: 'Fehler bei der Backup-Validierung' });
+  }
+});
+
 // Login Route
 app.post('/api/login', (req, res) => {
   try {

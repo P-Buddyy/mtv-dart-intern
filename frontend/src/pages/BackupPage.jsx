@@ -1,5 +1,4 @@
 import React from 'react';
-import BackupManager from '../components/BackupManager';
 
 const BackupPage = () => {
   return (
@@ -12,12 +11,36 @@ const BackupPage = () => {
           </p>
         </div>
         
-        {/* Temporärer Test-Text */}
-        <div className="mb-4 p-4 bg-green-100 text-green-800 rounded-lg">
-          <strong>✅ Backup-Seite ist erreichbar!</strong> Die Backup-Funktionalität sollte jetzt verfügbar sein.
+        {/* Einfacher Test-Bereich */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">Backup-Funktionalität</h2>
+          
+          <div className="mb-4 p-4 bg-green-100 text-green-800 rounded-lg">
+            <strong>✅ Backup-Seite ist erreichbar!</strong> 
+          </div>
+          
+          <div className="mb-8 p-4 bg-blue-50 rounded-lg">
+            <h3 className="text-lg font-semibold text-blue-800 mb-3">Backup erstellen</h3>
+            <p className="text-blue-700 mb-4">
+              Erstelle eine Sicherungskopie aller Daten als JSON-Datei.
+            </p>
+            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+              Backup herunterladen
+            </button>
+          </div>
+
+          <div className="p-4 bg-green-50 rounded-lg">
+            <h3 className="text-lg font-semibold text-green-800 mb-3">Backup wiederherstellen</h3>
+            <p className="text-green-700 mb-4">
+              Stelle Daten aus einer Backup-Datei wieder her.
+            </p>
+            <input
+              type="file"
+              accept=".json"
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+            />
+          </div>
         </div>
-        
-        <BackupManager />
         
         <div className="mt-8 p-4 bg-yellow-50 rounded-lg">
           <h3 className="text-lg font-semibold text-yellow-800 mb-2">⚠️ Wichtige Hinweise</h3>

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import BackupManager from '../components/BackupManager';
 
 const defaultPrices = {
   bier: 1.5,
@@ -198,12 +197,6 @@ export default function CashPage() {
           ))}
         </ul>
         <button className="btn-danger mt-6 w-full" onClick={deleteHistory}>Kassen Historie löschen</button>
-      </div>
-      
-      {/* Backup-Bereich */}
-      <div className="card">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">💾 Backup-Verwaltung</h2>
-        <BackupManager />
       </div>
       {showModal && (
         <Modal onClose={closeModal}>

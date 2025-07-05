@@ -1,0 +1,34 @@
+{
+  "members": [
+    {
+      "id": 1,
+      "name": "Max Mustermann",
+      "status": "active"
+    },
+    {
+      "id": 2,
+      "name": "Anna Schmidt",
+      "status": "active"
+    },
+    {
+      "id": 3,
+      "name": "Tom Weber",
+      "status": "inactive"
+    }
+  ],
+  "games": [],
+  "drinks": {
+    "prices": {
+      "bier": 1.5,
+      "mischung": 2.5,
+      "kurze": 0.5,
+      "softdrinks": 1,
+      "redbull": 2
+    },
+    "debts": {}
+  },
+  "cash": {
+    "balance": 0,
+    "history": []
+  }
+}

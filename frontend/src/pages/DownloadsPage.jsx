@@ -1,4 +1,5 @@
 import React from 'react';
+import BackupManager from '../components/BackupManager';
 
 export default function DownloadsPage() {
   return (
@@ -49,6 +50,15 @@ export default function DownloadsPage() {
               </a>
             </div>
           </div>
+        </div>
+        
+        {/* Backup-Bereich */}
+        <div className="card mt-8">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">💾 Backup-Verwaltung</h2>
+          <p className="text-gray-600 mb-4">
+            Erstelle Sicherungskopien aller Daten und stelle sie bei Bedarf wieder her.
+          </p>
+          <BackupManager />
         </div>
       </div>
     </div>

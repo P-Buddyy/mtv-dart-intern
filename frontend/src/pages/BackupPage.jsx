@@ -12,6 +12,11 @@ const BackupPage = () => {
           </p>
         </div>
         
+        {/* Temporärer Test-Text */}
+        <div className="mb-4 p-4 bg-green-100 text-green-800 rounded-lg">
+          <strong>✅ Backup-Seite ist erreichbar!</strong> Die Backup-Funktionalität sollte jetzt verfügbar sein.
+        </div>
+        
         <BackupManager />
         
         <div className="mt-8 p-4 bg-yellow-50 rounded-lg">

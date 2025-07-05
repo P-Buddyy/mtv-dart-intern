@@ -370,41 +370,206 @@ function App() {
   );
 
   // Downloads Page
-  const DownloadsPage = () => React.createElement('div', {
-    className: 'p-4 lg:p-6'
-  },
-    React.createElement('h1', {
-      className: 'text-2xl lg:text-3xl font-bold mb-6 lg:mb-8 bg-gradient-to-r from-blue-600 to-yellow-500 bg-clip-text text-transparent'
-    }, 'Downloads'),
-    React.createElement('div', {
-      className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6'
-    },
-      [
-        { name: 'Getränkeliste Gegner PDF', file: 'Liste_PDF.pdf', icon: '📄' },
-        { name: 'Getränkeliste Gegner Word', file: 'Liste_Word.docx', icon: '📝' },
-        { name: 'Spielbericht', file: 'Spielbericht.pdf', icon: '📊' }
-      ].map(item => 
-        React.createElement('div', {
-          key: item.file,
-          className: 'bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 border border-gray-100'
-        },
-          React.createElement('div', {
-            className: 'flex items-center mb-4'
+  const DownloadsPage = () => {
+    const [backupMessage, setBackupMessage] = useState('');
+    const [backupMessageType, setBackupMessageType] = useState('');
+    const [isBackupLoading, setIsBackupLoading] = useState(false);
+
+    const downloadBackup = async () => {
+      setIsBackupLoading(true);
+      setBackupMessage('');
+      
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/backup/download', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Fehler beim Download');
+        }
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `mtv-darts-backup-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        setBackupMessage('Backup erfolgreich heruntergeladen!');
+        setBackupMessageType('success');
+      } catch (error) {
+        console.error('Download-Fehler:', error);
+        setBackupMessage('Fehler beim Herunterladen des Backups');
+        setBackupMessageType('error');
+      } finally {
+        setIsBackupLoading(false);
+      }
+    };
+
+    const uploadBackup = async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      setIsBackupLoading(true);
+      setBackupMessage('');
+      
+      try {
+        const fileContent = await file.text();
+        const backupData = JSON.parse(fileContent);
+        
+        if (!backupData.data) {
+          throw new Error('Ungültiges Backup-Format');
+        }
+        
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/backup/upload', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
-            React.createElement('span', { className: 'text-3xl mr-4' }, item.icon),
+          body: JSON.stringify({ data: backupData.data })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Fehler beim Upload');
+        }
+        
+        const result = await response.json();
+        setBackupMessage(`Backup erfolgreich wiederhergestellt! ${result.stats.members} Mitglieder, ${result.stats.games} Spiele`);
+        setBackupMessageType('success');
+        
+        // Seite neu laden um die Daten zu aktualisieren
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+        
+      } catch (error) {
+        console.error('Upload-Fehler:', error);
+        setBackupMessage(`Fehler beim Wiederherstellen: ${error.message}`);
+        setBackupMessageType('error');
+      } finally {
+        setIsBackupLoading(false);
+        // Reset file input
+        event.target.value = '';
+      }
+    };
+
+    return React.createElement('div', {
+      className: 'p-4 lg:p-6'
+    },
+      React.createElement('h1', {
+        className: 'text-2xl lg:text-3xl font-bold mb-6 lg:mb-8 bg-gradient-to-r from-blue-600 to-yellow-500 bg-clip-text text-transparent'
+      }, 'Downloads'),
+      
+      // Backup Section
+      React.createElement('div', {
+        className: 'bg-white p-6 rounded-2xl shadow-lg mb-6 border border-gray-100'
+      },
+        React.createElement('div', {
+          className: 'flex items-center mb-4'
+        },
+          React.createElement('span', { className: 'text-3xl mr-4' }, '💾'),
+          React.createElement('div', {},
             React.createElement('h3', {
               className: 'font-semibold text-lg'
-            }, item.name)
+            }, 'Daten-Backup'),
+            React.createElement('p', {
+              className: 'text-gray-500 text-sm'
+            }, 'Sichern und Wiederherstellen aller Daten')
+          )
+        ),
+        
+        backupMessage && React.createElement('div', {
+          className: `mb-4 p-3 rounded-lg text-sm ${
+            backupMessageType === 'success' 
+              ? 'bg-green-100 text-green-800 border border-green-200' 
+              : 'bg-red-100 text-red-800 border border-red-200'
+          }`
+        }, backupMessage),
+        
+        React.createElement('div', {
+          className: 'flex flex-col sm:flex-row gap-4'
+        },
+          React.createElement('button', {
+            onClick: downloadBackup,
+            disabled: isBackupLoading,
+            className: 'flex-1 bg-gradient-to-r from-blue-600 to-yellow-500 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 font-semibold flex items-center justify-center gap-2'
+          },
+            isBackupLoading ? [
+              React.createElement('div', {
+                key: 'spinner',
+                className: 'w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin'
+              }),
+              'Erstelle Backup...'
+            ] : [
+              React.createElement('span', { key: 'icon' }, '📥'),
+              'Backup erstellen'
+            ]
           ),
-          React.createElement('a', {
-            href: `/Listen/${item.file}`,
-            download: item.file,
-            className: 'inline-block bg-gradient-to-r from-blue-600 to-yellow-500 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 font-semibold'
-          }, 'Herunterladen')
+          
+          React.createElement('label', {
+            className: 'flex-1 bg-gray-600 text-white px-6 py-3 rounded-xl hover:bg-gray-700 transition-all duration-200 transform hover:scale-105 font-semibold flex items-center justify-center gap-2 cursor-pointer'
+          },
+            React.createElement('span', {}, '📤'),
+            'Backup wiederherstellen',
+            React.createElement('input', {
+              type: 'file',
+              accept: '.json',
+              onChange: uploadBackup,
+              className: 'hidden',
+              disabled: isBackupLoading
+            })
+          )
+        ),
+        
+        React.createElement('div', {
+          className: 'mt-4 text-xs text-gray-500'
+        },
+          React.createElement('p', {}, '• Backup enthält alle Mitglieder, Spiele, Getränke und Kassen-Daten'),
+          React.createElement('p', {}, '• Vor der Wiederherstellung wird automatisch ein Backup der aktuellen Daten erstellt'),
+          React.createElement('p', {}, '• Nach der Wiederherstellung wird die Seite automatisch neu geladen')
+        )
+      ),
+      
+      // Downloads Section
+      React.createElement('div', {
+        className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6'
+      },
+        [
+          { name: 'Getränkeliste Gegner PDF', file: 'Liste_PDF.pdf', icon: '📄' },
+          { name: 'Getränkeliste Gegner Word', file: 'Liste_Word.docx', icon: '📝' },
+          { name: 'Spielbericht', file: 'Spielbericht.pdf', icon: '📊' }
+        ].map(item => 
+          React.createElement('div', {
+            key: item.file,
+            className: 'bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 border border-gray-100'
+          },
+            React.createElement('div', {
+              className: 'flex items-center mb-4'
+            },
+              React.createElement('span', { className: 'text-3xl mr-4' }, item.icon),
+              React.createElement('h3', {
+                className: 'font-semibold text-lg'
+              }, item.name)
+            ),
+            React.createElement('a', {
+              href: `/Listen/${item.file}`,
+              download: item.file,
+              className: 'inline-block bg-gradient-to-r from-blue-600 to-yellow-500 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 font-semibold'
+            }, 'Herunterladen')
+          )
         )
       )
-    )
-  );
+    );
+  };
 
   // Games Page
   const GamesPage = () => {

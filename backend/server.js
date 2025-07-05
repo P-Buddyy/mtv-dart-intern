@@ -651,6 +651,75 @@ app.delete('/api/cash/history', (req, res) => {
   res.json({ message: 'Kassenhistorie gelöscht' });
 });
 
+// Backup-Routen
+app.get('/api/backup/download', authenticateToken, (req, res) => {
+  try {
+    const backupData = {
+      version: '1.0',
+      timestamp: new Date().toISOString(),
+      data: {
+        members: db.members,
+        games: db.games,
+        drinks: db.drinks,
+        cash: db.cash
+      }
+    };
+    
+    const filename = `mtv-darts-backup-${new Date().toISOString().split('T')[0]}.json`;
+    
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.json(backupData);
+  } catch (error) {
+    console.error('Backup-Download Fehler:', error);
+    res.status(500).json({ error: 'Fehler beim Erstellen des Backups' });
+  }
+});
+
+app.post('/api/backup/upload', authenticateToken, (req, res) => {
+  try {
+    const { data } = req.body;
+    
+    if (!data || !data.members || !data.games || !data.drinks || !data.cash) {
+      return res.status(400).json({ error: 'Ungültiges Backup-Format' });
+    }
+    
+    // Validiere die Datenstruktur
+    if (!Array.isArray(data.members) || !Array.isArray(data.games)) {
+      return res.status(400).json({ error: 'Ungültige Datenstruktur' });
+    }
+    
+    // Erstelle Backup der aktuellen Daten
+    const backupPath = path.join(__dirname, 'data', `db.backup.before-restore.${Date.now()}.json`);
+    const dbDir = path.dirname(backupPath);
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
+    }
+    fs.writeFileSync(backupPath, JSON.stringify(db, null, 2));
+    
+    // Stelle die Daten wieder her
+    db.members = data.members;
+    db.games = data.games;
+    db.drinks = data.drinks;
+    db.cash = data.cash;
+    
+    // Speichere die wiederhergestellten Daten
+    saveDB();
+    
+    res.json({ 
+      message: 'Backup erfolgreich wiederhergestellt',
+      stats: {
+        members: db.members.length,
+        games: db.games.length,
+        activeMembers: db.members.filter(m => m.status === 'active').length
+      }
+    });
+  } catch (error) {
+    console.error('Backup-Upload Fehler:', error);
+    res.status(500).json({ error: 'Fehler beim Wiederherstellen des Backups' });
+  }
+});
+
 // Fallback für alle Frontend-Routen - serve index.html
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));

@@ -67,7 +67,11 @@ export default function Sidebar() {
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  'nav-link bg-red-50 hover:bg-red-100 text-red-700 hover:text-red-800' + (isActive ? ' active bg-red-100 text-red-800' : '')
+                  `flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-sm md:text-base ${
+                    isActive 
+                      ? 'bg-red-100 text-red-800 font-medium' 
+                      : 'bg-red-50 hover:bg-red-100 text-red-700 hover:text-red-800'
+                  }`
                 }
                 onClick={closeSidebar}
               >

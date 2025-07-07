@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import api from '../utils/api';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { format, parseISO } from 'date-fns';
 
 const initialForm = {
@@ -19,20 +19,17 @@ export default function GamesPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetchData();
+    fetchGames();
+    fetchMembers();
   }, []);
 
-  const fetchData = async () => {
-    try {
-      const [gamesRes, membersRes] = await Promise.all([
-        api.get('/api/games'),
-        api.get('/api/members')
-      ]);
-      setGames(gamesRes.data);
-      setMembers(membersRes.data);
-    } catch (error) {
-      console.error('Fehler beim Laden der Daten:', error);
-    }
+  const fetchGames = async () => {
+    const res = await axios.get('/api/games');
+    setGames(res.data);
+  };
+  const fetchMembers = async () => {
+    const res = await axios.get('/api/members');
+    setMembers(res.data.members.filter(m => m.status === 'active'));
   };
 
   const handleChange = e => {
@@ -50,23 +47,22 @@ export default function GamesPage() {
   };
   const handleDelete = async id => {
     if (!window.confirm('Wirklich löschen?')) return;
-    await api.delete(`/api/games/${id}`);
-    fetchData();
+    await axios.delete(`/api/games/${id}`);
+    fetchGames();
   };
   const handleSubmit = async e => {
     e.preventDefault();
-    if (!form.player1 || !form.player2 || !form.score1 || !form.score2) return;
-    
     setLoading(true);
-    try {
-      await api.post('/api/games', form);
-      setForm(initialForm);
-      fetchData();
-    } catch (error) {
-      console.error('Fehler beim Hinzufügen:', error);
-    } finally {
-      setLoading(false);
+    if (editId) {
+      await axios.put(`/api/games/${editId}`, form);
+    } else {
+      await axios.post('/api/games', form);
     }
+    setForm(initialForm);
+    setEditId(null);
+    setShowForm(false);
+    setLoading(false);
+    fetchGames();
   };
   const handleCancel = () => {
     setForm(initialForm);
@@ -75,97 +71,77 @@ export default function GamesPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-6 md:py-10 px-4">
-      <h1 className="text-2xl md:text-3xl font-bold text-mtv-blue-800 mb-6 md:mb-8">Spielplan</h1>
-      
-      <form onSubmit={handleSubmit} className="card mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div className="max-w-3xl mx-auto py-10 px-4">
+      <h1 className="text-3xl font-bold text-mtv-blue-800 mb-8">Unsere Spiele</h1>
+      <button className="btn-primary mb-6" onClick={() => setShowForm(f => !f)}>
+        {showForm ? 'Formular schließen' : 'Neues Spiel eintragen'}
+      </button>
+      {showForm && (
+        <form className="card mb-8 flex flex-col gap-4" onSubmit={handleSubmit}>
+          <div className="flex gap-4 flex-col md:flex-row">
+            <div className="flex-1">
+              <label className="block mb-1 font-medium">Datum</label>
+              <input type="date" name="date" className="input-field" value={form.date} onChange={handleChange} required />
+            </div>
+            <div className="flex-1">
+              <label className="block mb-1 font-medium">Uhrzeit</label>
+              <input type="time" name="time" className="input-field" value={form.time} onChange={handleChange} required />
+            </div>
+          </div>
+          <div className="flex gap-4 flex-col md:flex-row">
+            <div className="flex-1">
+              <label className="block mb-1 font-medium">Gegner</label>
+              <input type="text" name="opponent" className="input-field" value={form.opponent} onChange={handleChange} required />
+            </div>
+            <div className="flex-1">
+              <label className="block mb-1 font-medium">Spielort</label>
+              <input type="text" name="location" className="input-field" value={form.location} onChange={handleChange} required />
+            </div>
+          </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Spieler 1</label>
+            <label className="block mb-1 font-medium">Unsere Teilnehmer</label>
             <select
-              value={form.player1}
-              onChange={(e) => setForm({...form, player1: e.target.value})}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-mtv-blue-500 focus:border-transparent"
-              required
+              multiple
+              className="input-field h-32"
+              value={form.participants}
+              onChange={handleParticipants}
             >
-              <option value="">Spieler wählen</option>
-              {members.map((member, index) => (
-                <option key={member.id || index} value={member.name}>{member.name}</option>
+              {members.map(m => (
+                <option key={m.id} value={m.id}>{m.name}</option>
               ))}
             </select>
+            <div className="text-xs text-gray-400 mt-1">Mehrfachauswahl mit Strg/Cmd</div>
           </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Punkte 1</label>
-            <input
-              type="number"
-              value={form.score1}
-              onChange={(e) => setForm({...form, score1: e.target.value})}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-mtv-blue-500 focus:border-transparent"
-              required
-            />
+          <div className="flex gap-4 justify-end">
+            <button type="button" className="btn-outline" onClick={handleCancel}>Abbrechen</button>
+            <button type="submit" className="btn-primary" disabled={loading}>{editId ? 'Speichern' : 'Spiel speichern'}</button>
           </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Spieler 2</label>
-            <select
-              value={form.player2}
-              onChange={(e) => setForm({...form, player2: e.target.value})}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-mtv-blue-500 focus:border-transparent"
-              required
-            >
-              <option value="">Spieler wählen</option>
-              {members.map((member, index) => (
-                <option key={member.id || index} value={member.name}>{member.name}</option>
-              ))}
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Punkte 2</label>
-            <input
-              type="number"
-              value={form.score2}
-              onChange={(e) => setForm({...form, score2: e.target.value})}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-mtv-blue-500 focus:border-transparent"
-              required
-            />
-          </div>
-          
-          <div className="flex items-end">
-            <button
-              type="submit"
-              disabled={loading || !form.player1 || !form.player2 || !form.score1 || !form.score2}
-              className="btn-primary w-full"
-            >
-              {loading ? 'Hinzufügen...' : 'Hinzufügen'}
-            </button>
-          </div>
-        </div>
-      </form>
-
-      <div className="list-mobile">
-        {games.map((game, index) => (
-          <div key={game.id || index} className="card">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <span className="text-2xl">🎯</span>
-                <div>
-                  <div className="font-medium">
-                    {game.player1} ({game.score1}) vs {game.player2} ({game.score2})
-                  </div>
-                  <div className="text-sm text-gray-500">{game.date}</div>
-                </div>
-              </div>
+        </form>
+      )}
+      <div className="flex flex-col gap-6">
+        {games.length === 0 && <div className="text-gray-500">Noch keine Spiele eingetragen.</div>}
+        {games.map(game => (
+          <div key={game.id} className="card flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="font-semibold text-lg">{format(parseISO(game.date), 'dd.MM.yyyy')} {game.time} Uhr</div>
+              <div className="text-gray-700">Gegner: <span className="font-medium">{game.opponent}</span></div>
+              <div className="text-gray-700">Ort: <span className="font-medium">{game.location}</span></div>
+              <div className="text-gray-500 text-sm">Teilnehmer: {game.participants?.length > 0 ? game.participants.map(id => members.find(m => m.id === id)?.name).filter(Boolean).join(', ') : 'Keine'}</div>
+            </div>
+            <div className="flex gap-2">
+              <button className="btn-outline" onClick={() => handleEdit(game)}>Bearbeiten</button>
+              <button className="btn-danger" onClick={() => handleDelete(game.id)}>Löschen</button>
             </div>
           </div>
         ))}
-        
-        {games.length === 0 && (
-          <div className="card text-center text-gray-500">
-            Keine Spiele vorhanden
-          </div>
-        )}
+      </div>
+      <div className="mt-12 flex flex-col md:flex-row gap-4">
+        <a href="#" className="card flex-1 flex items-center justify-center gap-3 btn-outline text-lg" target="_blank" rel="noopener noreferrer">
+          <span>🏆</span> Liga Tabelle
+        </a>
+        <a href="#" className="card flex-1 flex items-center justify-center gap-3 btn-outline text-lg" target="_blank" rel="noopener noreferrer">
+          <span>📅</span> Liga Spielplan
+        </a>
       </div>
     </div>
   );

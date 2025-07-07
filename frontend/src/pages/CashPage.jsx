@@ -1,229 +1,306 @@
-import React, { useState, useEffect } from 'react';
-import api from '../utils/api';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+
+const defaultPrices = {
+  bier: 1.5,
+  mischung: 2.5,
+  kurze: 0.5,
+  softdrinks: 1.0,
+  redbull: 2.0,
+};
 
 export default function CashPage() {
-  const [cash, setCash] = useState({ balance: 0, transactions: [] });
-  const [drinks, setDrinks] = useState([]);
+  const [cash, setCash] = useState({ balance: 0, history: [] });
+  const [prices, setPrices] = useState(defaultPrices);
   const [members, setMembers] = useState([]);
-  const [form, setForm] = useState({
-    amount: '',
-    description: '',
-    type: 'income'
-  });
-  const [drinkForm, setDrinkForm] = useState({
-    memberId: '',
-    amount: ''
-  });
+  const [editPrices, setEditPrices] = useState(false);
+  const [priceInputs, setPriceInputs] = useState(defaultPrices);
+  const [showModal, setShowModal] = useState(false);
+  const [modalType, setModalType] = useState('');
+  const [modalData, setModalData] = useState({});
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const fetchAll = async () => {
+    const [cashRes, drinksRes] = await Promise.all([
+      axios.get('/api/cash'),
+      axios.get('/api/drinks'),
+    ]);
+    setCash(cashRes.data);
+    setPrices(drinksRes.data.prices);
+    setPriceInputs(drinksRes.data.prices);
+    setMembers(drinksRes.data.members);
+  };
+  useEffect(() => { fetchAll(); }, []);
 
-  const fetchData = async () => {
-    try {
-      const [cashRes, drinksRes, membersRes] = await Promise.all([
-        api.get('/api/cash'),
-        api.get('/api/drinks'),
-        api.get('/api/members')
-      ]);
-      setCash(cashRes.data);
-      setDrinks(drinksRes.data);
-      setMembers(membersRes.data);
-    } catch (error) {
-      console.error('Fehler beim Laden der Daten:', error);
-    }
+  const handlePriceChange = e => {
+    const { name, value } = e.target;
+    setPriceInputs(p => ({ ...p, [name]: value }));
+  };
+  const savePrices = async () => {
+    setLoading(true);
+    await axios.put('/api/drinks/prices', { prices: priceInputs });
+    setEditPrices(false);
+    setLoading(false);
+    fetchAll();
   };
 
-  const handleTransaction = async (e) => {
-    e.preventDefault();
-    if (!form.amount || !form.description) return;
-    
-    setLoading(true);
-    try {
-      await api.post('/api/cash/transaction', {
-        amount: parseFloat(form.amount),
-        description: form.description,
-        type: form.type
-      });
-      setForm({ amount: '', description: '', type: 'income' });
-      fetchData();
-    } catch (error) {
-      console.error('Fehler bei Transaktion:', error);
-    } finally {
-      setLoading(false);
-    }
+  const openModal = (type, data = {}) => {
+    setModalType(type);
+    setModalData(data);
+    setShowModal(true);
+  };
+  const closeModal = () => {
+    setShowModal(false);
+    setModalType('');
+    setModalData({});
   };
 
-  const handleDrinkPayment = async (e) => {
-    e.preventDefault();
-    if (!drinkForm.memberId || !drinkForm.amount) return;
-    
+  const handleTransaction = async (type) => {
     setLoading(true);
-    try {
-      await api.post('/api/drinks/add', {
-        memberId: drinkForm.memberId,
-        amount: parseFloat(drinkForm.amount)
-      });
-      await api.post('/api/drinks/pay', { 
-        memberId: drinkForm.memberId, 
-        amount: parseFloat(drinkForm.amount) 
-      });
-      setDrinkForm({ memberId: '', amount: '' });
-      fetchData();
-    } catch (error) {
-      console.error('Fehler bei Getränkebuchung:', error);
-    } finally {
-      setLoading(false);
-    }
+    await axios.post('/api/cash/transaction', {
+      amount: modalData.amount,
+      description: modalData.description,
+      type,
+    });
+    closeModal();
+    setLoading(false);
+    fetchAll();
+  };
+
+  const handleAddDrink = async (memberId, drinkType, amount) => {
+    setLoading(true);
+    await axios.post('/api/drinks/add', {
+      memberId,
+      drinks: { [drinkType]: amount },
+    });
+    setLoading(false);
+    fetchAll();
+  };
+
+  const handlePayDebt = async (memberId, amount) => {
+    setLoading(true);
+    await axios.post('/api/drinks/pay', { memberId, amount });
+    closeModal();
+    setLoading(false);
+    fetchAll();
+  };
+
+  const deleteHistory = async () => {
+    if (!window.confirm('Wirklich gesamte Historie löschen?')) return;
+    setLoading(true);
+    await axios.delete('/api/cash/history');
+    setLoading(false);
+    fetchAll();
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-6 md:py-10 px-4">
-      <h1 className="text-2xl md:text-3xl font-bold text-mtv-blue-800 mb-6 md:mb-8">Getränke & Kasse</h1>
-      
-      {/* Kassenstand */}
-      <div className="card mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <span className="text-2xl">💰</span>
-            <div>
-              <div className="font-semibold">Aktueller Kassenstand</div>
-              <div className="text-2xl font-bold text-mtv-blue-600">€{cash.balance?.toFixed(2) || '0.00'}</div>
-            </div>
-          </div>
+    <div className="max-w-4xl mx-auto py-10 px-4">
+      <h1 className="text-3xl font-bold text-mtv-blue-800 mb-8">Getränke & Kasse</h1>
+      <div className="card flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
+        <div className="text-xl font-bold">Aktueller Kassenstand: <span className="text-mtv-yellow-600">{cash.balance.toFixed(2)} €</span></div>
+        <div className="flex gap-4">
+          <button className="btn-primary" onClick={() => openModal('income')}>Einnahme (+)</button>
+          <button className="btn-danger" onClick={() => openModal('expense')}>Ausgabe (-)</button>
         </div>
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Kassen-Transaktionen */}
-        <div className="card">
-          <h2 className="text-xl font-semibold mb-4">Kassen-Transaktionen</h2>
-          
-          <form onSubmit={handleTransaction} className="mb-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Betrag (€)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={form.amount}
-                  onChange={(e) => setForm({...form, amount: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-mtv-blue-500 focus:border-transparent"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Beschreibung</label>
-                <input
-                  type="text"
-                  value={form.description}
-                  onChange={(e) => setForm({...form, description: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-mtv-blue-500 focus:border-transparent"
-                  required
-                />
-              </div>
-              
-              <div className="flex items-end">
-                <button
-                  type="submit"
-                  disabled={loading || !form.amount || !form.description}
-                  className="btn-primary w-full"
-                >
-                  {loading ? 'Hinzufügen...' : 'Hinzufügen'}
-                </button>
-              </div>
-            </div>
-          </form>
-
-          <div className="space-y-2 max-h-60 overflow-y-auto">
-            {cash.transactions?.map((transaction, index) => (
-              <div key={transaction.id || index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <div className="font-medium">{transaction.description}</div>
-                  <div className="text-sm text-gray-500">{transaction.date}</div>
-                </div>
-                <div className={`font-semibold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                  {transaction.type === 'income' ? '+' : '-'}€{transaction.amount?.toFixed(2)}
-                </div>
-              </div>
-            ))}
-            
-            {(!cash.transactions || cash.transactions.length === 0) && (
-              <div className="text-center text-gray-500 py-4">
-                Keine Transaktionen vorhanden
-              </div>
-            )}
-          </div>
+      <div className="card mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div className="font-semibold text-lg">Getränkepreise (nur für Mitglieder)</div>
+          {!editPrices && <button className="btn-outline" onClick={() => setEditPrices(true)}>Bearbeiten</button>}
         </div>
-
-        {/* Getränkebuchungen */}
-        <div className="card">
-          <h2 className="text-xl font-semibold mb-4">Getränkebuchungen</h2>
-          
-          <form onSubmit={handleDrinkPayment} className="mb-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Mitglied</label>
-                <select
-                  value={drinkForm.memberId}
-                  onChange={(e) => setDrinkForm({...drinkForm, memberId: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-mtv-blue-500 focus:border-transparent"
-                  required
-                >
-                  <option value="">Mitglied wählen</option>
-                  {members.map((member, index) => (
-                    <option key={member.id || index} value={member.id || index}>{member.name}</option>
+        <table className="min-w-full text-left mb-4">
+          <thead>
+            <tr className="bg-mtv-blue-50">
+              <th className="py-2 px-4">Getränk</th>
+              <th className="py-2 px-4">Preis (€)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(prices).map(([key, value]) => (
+              <tr key={key}>
+                <td className="py-2 px-4 font-medium capitalize">{key}</td>
+                <td className="py-2 px-4">
+                  {editPrices ? (
+                    <input
+                      type="number"
+                      step="0.01"
+                      name={key}
+                      className="input-field w-24"
+                      value={priceInputs[key]}
+                      onChange={handlePriceChange}
+                    />
+                  ) : (
+                    value.toFixed(2)
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {editPrices && (
+          <div className="flex gap-4 justify-end">
+            <button className="btn-outline" onClick={() => setEditPrices(false)}>Abbrechen</button>
+            <button className="btn-primary" onClick={savePrices} disabled={loading}>Speichern</button>
+          </div>
+        )}
+      </div>
+      <div className="card mb-8 overflow-x-auto">
+        <div className="font-semibold text-lg mb-4">Getränkeschulden</div>
+        <table className="min-w-full text-left">
+          <thead>
+            <tr className="bg-mtv-blue-50">
+              <th className="py-2 px-4">Mitglied</th>
+              <th className="py-2 px-4">Schulden (€)</th>
+              <th className="py-2 px-4">Aktionen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {members.map(m => (
+              <tr key={m.id}>
+                <td className="py-2 px-4 font-medium">{m.name}</td>
+                <td className="py-2 px-4">{(m.debts || 0).toFixed(2)}</td>
+                <td className="py-2 px-4 flex gap-2 flex-wrap">
+                  {Object.keys(prices).map(drink => (
+                    <button
+                      key={drink}
+                      className="btn-outline"
+                      onClick={() => handleAddDrink(m.id, drink, 1)}
+                    >
+                      +1 {drink.charAt(0).toUpperCase() + drink.slice(1)}
+                    </button>
                   ))}
-                </select>
-              </div>
-              
-              <div className="flex items-end">
-                <button
-                  type="submit"
-                  disabled={loading || !drinkForm.memberId || !drinkForm.amount}
-                  className="btn-primary w-full"
-                >
-                  {loading ? 'Buchen...' : 'Getränk buchen'}
-                </button>
-              </div>
-            </div>
-            
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Betrag (€)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={drinkForm.amount}
-                onChange={(e) => setDrinkForm({...drinkForm, amount: e.target.value})}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-mtv-blue-500 focus:border-transparent"
-                required
-              />
-            </div>
-          </form>
-
-          <div className="space-y-2 max-h-60 overflow-y-auto">
-            {drinks.map((drink, index) => (
-              <div key={drink.id || index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <div className="font-medium">{members.find(m => (m.id || m.id === 0) === (drink.memberId || drink.memberId === 0))?.name || 'Unbekannt'}</div>
-                  <div className="text-sm text-gray-500">{drink.date}</div>
-                </div>
-                <div className="font-semibold text-red-600">
-                  -€{drink.amount?.toFixed(2)}
-                </div>
-              </div>
+                  <button
+                    className="btn-primary ml-4"
+                    onClick={() => openModal('pay', { memberId: m.id, name: m.name, max: m.debts })}
+                  >
+                    Bezahlen
+                  </button>
+                </td>
+              </tr>
             ))}
-            
-            {(!drinks || drinks.length === 0) && (
-              <div className="text-center text-gray-500 py-4">
-                Keine Getränkebuchungen vorhanden
+          </tbody>
+        </table>
+      </div>
+      <div className="card mb-8 max-h-64 overflow-y-auto">
+        <div className="font-semibold text-lg mb-4">Kassen-Historie</div>
+        <ul className="divide-y divide-gray-100">
+          {cash.history.length === 0 && <li className="text-gray-500 py-2">Keine Buchungen vorhanden.</li>}
+          {cash.history.map(entry => (
+            <li key={entry.id} className="py-2 px-1 flex flex-col md:flex-row md:items-center justify-between gap-2 bg-white">
+              <div>
+                <span className="font-medium">{new Date(entry.date).toLocaleString('de-DE')}</span> – {entry.description}
               </div>
-            )}
-          </div>
-        </div>
+              <div className={entry.type === 'income' ? 'text-mtv-yellow-600 font-bold' : 'text-red-600 font-bold'}>
+                {entry.type === 'income' ? '+' : '-'}{entry.amount.toFixed(2)} €
+              </div>
+            </li>
+          ))}
+        </ul>
+        <button className="btn-danger mt-6 w-full" onClick={deleteHistory}>Kassen Historie löschen</button>
+      </div>
+      {showModal && (
+        <Modal onClose={closeModal}>
+          {modalType === 'income' && (
+            <TransactionForm
+              title="Einnahme buchen"
+              onSubmit={data => handleTransaction('income', data)}
+              onClose={closeModal}
+              loading={loading}
+            />
+          )}
+          {modalType === 'expense' && (
+            <TransactionForm
+              title="Ausgabe buchen"
+              onSubmit={data => handleTransaction('expense', data)}
+              onClose={closeModal}
+              loading={loading}
+            />
+          )}
+          {modalType === 'pay' && (
+            <PayForm
+              member={members.find(m => m.id === modalData.memberId)}
+              onSubmit={amount => handlePayDebt(modalData.memberId, amount)}
+              onClose={closeModal}
+              loading={loading}
+            />
+          )}
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function Modal({ children, onClose }) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        {children}
       </div>
     </div>
+  );
+}
+
+function TransactionForm({ title, onSubmit, onClose, loading }) {
+  const [amount, setAmount] = useState('');
+  const [description, setDescription] = useState('');
+  return (
+    <form
+      className="flex flex-col gap-4"
+      onSubmit={e => {
+        e.preventDefault();
+        onSubmit({ amount, description });
+      }}
+    >
+      <h2 className="text-xl font-bold mb-2">{title}</h2>
+      <input
+        type="number"
+        step="0.01"
+        className="input-field"
+        placeholder="Betrag (€)"
+        value={amount}
+        onChange={e => setAmount(e.target.value)}
+        required
+      />
+      <input
+        type="text"
+        className="input-field"
+        placeholder="Begründung (z.B. Getränke gekauft)"
+        value={description}
+        onChange={e => setDescription(e.target.value)}
+        required
+      />
+      <div className="flex gap-4 justify-end">
+        <button type="button" className="btn-outline" onClick={onClose}>Abbrechen</button>
+        <button type="submit" className="btn-primary" disabled={loading}>Buchen</button>
+      </div>
+    </form>
+  );
+}
+
+function PayForm({ member, onSubmit, onClose, loading }) {
+  const [amount, setAmount] = useState('');
+  return (
+    <form
+      className="flex flex-col gap-4"
+      onSubmit={e => {
+        e.preventDefault();
+        onSubmit(amount);
+      }}
+    >
+      <h2 className="text-xl font-bold mb-2">Schulden begleichen für {member?.name}</h2>
+      <input
+        type="number"
+        step="0.01"
+        className="input-field"
+        placeholder={`Betrag (max. ${member?.debts?.toFixed(2)} €)`}
+        value={amount}
+        onChange={e => setAmount(e.target.value)}
+        required
+      />
+      <div className="flex gap-4 justify-end">
+        <button type="button" className="btn-outline" onClick={onClose}>Abbrechen</button>
+        <button type="submit" className="btn-primary" disabled={loading}>Bezahlen</button>
+      </div>
+    </form>
   );
 } 

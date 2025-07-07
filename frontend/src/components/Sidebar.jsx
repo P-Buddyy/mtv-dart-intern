@@ -1,17 +1,13 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Menu, X, Shield } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 
 const navItems = [
   { to: '/downloads', label: 'Downloads', icon: '📄' },
   { to: '/games', label: 'Spielplan', icon: '🎯' },
   { to: '/members', label: 'Mitglieder', icon: '👥' },
   { to: '/cash', label: 'Getränke & Kasse', icon: '🍻' },
-];
-
-const adminItems = [
-  { to: '/admin', label: 'Admin', icon: <Shield className="w-5 h-5" /> },
 ];
 
 export default function Sidebar() {
@@ -55,27 +51,6 @@ export default function Sidebar() {
                 onClick={closeSidebar}
               >
                 <span className="mr-3 text-lg">{item.icon}</span>
-                {item.label}
-              </NavLink>
-            ))}
-            
-            {/* Admin Section Separator */}
-            <div className="my-4 border-t border-gray-200"></div>
-            
-            {adminItems.map(item => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  `flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-sm md:text-base ${
-                    isActive 
-                      ? 'bg-red-100 text-red-800 font-medium' 
-                      : 'bg-red-50 hover:bg-red-100 text-red-700 hover:text-red-800'
-                  }`
-                }
-                onClick={closeSidebar}
-              >
-                <span className="mr-3">{item.icon}</span>
                 {item.label}
               </NavLink>
             ))}

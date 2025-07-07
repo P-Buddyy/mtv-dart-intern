@@ -1,13 +1,10 @@
 import React from 'react';
-import BackupManager from '../components/BackupManager';
 
 export default function DownloadsPage() {
   return (
     <div className="max-w-2xl mx-auto py-6 md:py-10 px-4">
       <h1 className="text-2xl md:text-3xl font-bold text-mtv-blue-800 mb-6 md:mb-8">Wichtige Dokumente</h1>
       <div className="list-mobile">
-        <BackupManager />
-        
         <div className="card">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4">

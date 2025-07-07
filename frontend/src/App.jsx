@@ -5,6 +5,7 @@ import DownloadsPage from './pages/DownloadsPage';
 import GamesPage from './pages/GamesPage';
 import MembersPage from './pages/MembersPage';
 import CashPage from './pages/CashPage';
+import AdminPage from './pages/AdminPage';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import Sidebar from './components/Sidebar';
 
@@ -35,6 +36,7 @@ export default function App() {
                       <Route path="games" element={<GamesPage />} />
                       <Route path="members" element={<MembersPage />} />
                       <Route path="cash" element={<CashPage />} />
+                      <Route path="admin" element={<AdminPage />} />
                       <Route path="*" element={<Navigate to="/downloads" />} />
                     </Routes>
                   </div>

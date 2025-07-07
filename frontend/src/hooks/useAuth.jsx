@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 
 const AuthContext = createContext();
 
@@ -19,7 +19,7 @@ export function AuthProvider({ children }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.post('/api/login', { password });
+      const res = await api.post('/api/login', { password });
       setToken(res.data.token);
       setIsAuthenticated(true);
       setLoading(false);
@@ -39,11 +39,11 @@ export function AuthProvider({ children }) {
 
   // Axios Interceptor für Token
   useEffect(() => {
-    const reqInterceptor = axios.interceptors.request.use((config) => {
+    const reqInterceptor = api.interceptors.request.use((config) => {
       if (token) config.headers.Authorization = `Bearer ${token}`;
       return config;
     });
-    return () => axios.interceptors.request.eject(reqInterceptor);
+    return () => api.interceptors.request.eject(reqInterceptor);
   }, [token]);
 
   return (

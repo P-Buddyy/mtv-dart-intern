@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import api from '../utils/api';
 
 export default function BackupManager() {
   const { token } = useAuth();
@@ -12,17 +13,11 @@ export default function BackupManager() {
     setMessage('');
     
     try {
-      const response = await fetch('/api/backup/download', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await api.get('/api/backup/download', {
+        responseType: 'blob'
       });
       
-      if (!response.ok) {
-        throw new Error('Fehler beim Download');
-      }
-      
-      const blob = await response.blob();
+      const blob = response.data;
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -58,21 +53,9 @@ export default function BackupManager() {
         throw new Error('Ungültiges Backup-Format');
       }
       
-      const response = await fetch('/api/backup/upload', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ data: backupData.data })
-      });
+      const response = await api.post('/api/backup/upload', { data: backupData.data });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Fehler beim Upload');
-      }
-      
-      const result = await response.json();
+      const result = response.data;
       setMessage(`Backup erfolgreich wiederhergestellt! ${result.stats.members} Mitglieder, ${result.stats.games} Spiele`);
       setMessageType('success');
       
@@ -83,7 +66,7 @@ export default function BackupManager() {
       
     } catch (error) {
       console.error('Upload-Fehler:', error);
-      setMessage(`Fehler beim Wiederherstellen: ${error.message}`);
+      setMessage(`Fehler beim Wiederherstellen: ${error.response?.data?.error || error.message}`);
       setMessageType('error');
     } finally {
       setIsLoading(false);

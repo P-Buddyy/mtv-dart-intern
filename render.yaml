@@ -1,12 +1,13 @@
 services:
+  # Backend API Service
   - type: web
-    name: mtv-schwabstedt-darts
+    name: mtv-darts-backend
     env: node
     buildCommand: cd backend && npm install
-    startCommand: npm start
+    startCommand: cd backend && npm start
     envVars:
       - key: NODE_ENV
-        value: development
+        value: production
       - key: PORT
         value: 10000
       - key: SITE_PASSWORD
@@ -14,4 +15,15 @@ services:
       - key: JWT_SECRET
         generateValue: true
     healthCheckPath: /api/health
+    autoDeploy: true
+
+  # Frontend Service
+  - type: web
+    name: mtv-darts-frontend
+    env: static
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://mtv-darts-backend.onrender.com
     autoDeploy: true 
